@@ -15,7 +15,7 @@ html,body{margin:0;padding:0;background:#0a0d12;color:#e8edf5;
   font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Segoe UI,Roboto,sans-serif;
   overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-.wrap{max-width:640px;margin:0 auto;padding:8px 12px 100px}
+.wrap{max-width:640px;margin:0 auto;padding:8px 12px 104px}
 .mono{font-variant-numeric:tabular-nums}
 
 .top{display:flex;align-items:center;gap:8px;padding:8px 2px;font-size:12px;color:#8fa0b8}
@@ -27,7 +27,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 .chip{background:#161c26;border:1px solid #222b38;border-radius:999px;padding:3px 9px;font-size:11px;white-space:nowrap}
 .chip b{color:#e8edf5;font-weight:600}
 
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 12px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px}
 .tab{background:#12171f;border:1px solid #1e2734;border-radius:12px;padding:10px 4px;text-align:center;
   font-size:12px;font-weight:700;color:#7b8ba3;transition:.15s}
 .tab.act{color:#0a0d12;background:linear-gradient(160deg,#4dabf7,#1c7ed6);border-color:transparent}
@@ -37,28 +37,36 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
   letter-spacing:.09em;color:#6c7d95;margin-bottom:10px;font-weight:700}
 .card>.hd .sp{flex:1}
 
-.big{font-size:118px;line-height:.9;font-weight:800;letter-spacing:-.04em;text-align:center;margin:6px 0}
+.big{font-size:132px;line-height:.88;font-weight:800;letter-spacing:-.05em;text-align:center;margin:2px 0}
+.big.idle{color:#2b3644}
 .sub{text-align:center;color:#7b8ba3;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-top:12px}
 .cell{background:#0c1119;border:1px solid #1a2230;border-radius:11px;padding:9px 4px}
-.cell .v{font-size:22px;font-weight:700;line-height:1.1}
+.cell .v{font-size:21px;font-weight:700;line-height:1.1}
 .cell .k{font-size:9.5px;color:#6c7d95;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;font-weight:600}
 
-canvas.chart{width:100%;height:120px;display:block;background:#0b1017;border-radius:10px}
+canvas.chart{width:100%;height:110px;display:block;background:#0b1017;border-radius:10px}
 .bar{height:8px;background:#0c1119;border-radius:99px;overflow:hidden;margin-top:8px}
 .bar i{display:block;height:100%;border-radius:99px;transition:width .15s,background .15s}
 
-.reps{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
-.rep{flex:0 0 auto;min-width:38px;text-align:center;background:#0c1119;border:1px solid #1a2230;
-  border-radius:8px;padding:5px 6px;font-size:11px;font-weight:700}
-.rep small{display:block;font-size:9px;color:#6c7d95;font-weight:600}
-.rep.bad{border-color:#5a2230;background:#1a0d12;color:#ff8f9a}
-.rep.tired{border-color:#5a4a1a;background:#1a1508;color:#ffd98a}
+.golive{background:linear-gradient(160deg,#2fd07a,#12a35a);color:#04210f;border-radius:16px;
+  padding:22px;text-align:center;font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:-.01em}
+.golive.stop{background:linear-gradient(160deg,#e8434f,#b81f2b);color:#fff}
+.golive small{display:block;font-size:12px;font-weight:600;opacity:.72;margin-top:4px;letter-spacing:0}
+
+.ex{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #17202c}
+.ex:last-child{border-bottom:0}
+.ex .nm{flex:1;font-weight:700;font-size:14.5px}
+.ex .nm small{display:block;color:#6c7d95;font-size:11px;font-weight:500;margin-top:2px}
+.ex .vol{font-size:13px;color:#8fa0b8;font-variant-numeric:tabular-nums;text-align:right}
+.setrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pill{background:#0c1119;border:1px solid #1a2230;border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:700}
+.pill.man{border-color:#2c4a6e;color:#8ec5ff}
 
 .dock{position:fixed;left:0;right:0;bottom:0;background:rgba(10,13,18,.94);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #1a2230;
   padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:40}
-.dockin{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:7px}
+.dockin{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr auto;gap:7px}
 .btn{background:#182130;border:1px solid #253243;color:#dfe7f2;border-radius:13px;
   padding:13px 6px;font-size:12.5px;font-weight:700;text-align:center;cursor:pointer;transition:.12s;line-height:1.25}
 .btn:active{transform:scale(.96);background:#1f2b3d}
@@ -69,10 +77,10 @@ canvas.chart{width:100%;height:120px;display:block;background:#0b1017;border-rad
 .btn .s{display:block;font-size:9.5px;font-weight:600;opacity:.65;margin-top:1px}
 .btn.sq{width:52px;padding:13px 0;font-size:18px}
 
-.sheet{position:fixed;inset:0;background:rgba(5,7,11,.72);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end}
+.sheet{position:fixed;inset:0;background:rgba(5,7,11,.75);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end}
 .sheet.on{display:flex}
 .sheetin{background:#0e131b;border-top:1px solid #223047;border-radius:20px 20px 0 0;width:100%;
-  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:16px 14px calc(24px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
 .sheet h2{font-size:17px;margin:0 0 12px;display:flex;align-items:center}
 .sheet h2 .sp{flex:1}
@@ -81,13 +89,29 @@ canvas.chart{width:100%;height:120px;display:block;background:#0b1017;border-rad
 .row label{flex:1;color:#c6d2e2}
 .row small{display:block;color:#6c7d95;font-size:11px;margin-top:2px;font-weight:400}
 input[type=range]{width:130px;accent-color:#2f7cf6}
-input[type=number]{width:78px;background:#0c1119;border:1px solid #24303f;color:#e8edf5;
-  border-radius:9px;padding:8px;font-size:15px;text-align:center;font-variant-numeric:tabular-nums}
-select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9px;padding:8px;font-size:14px}
+input[type=number],input[type=text]{background:#0c1119;border:1px solid #24303f;color:#e8edf5;
+  border-radius:9px;padding:9px;font-size:15px;font-variant-numeric:tabular-nums}
+input[type=number]{width:78px;text-align:center}
+input[type=text]{width:100%}
+select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9px;padding:9px;font-size:14px}
 .sw{width:50px;height:29px;background:#242f3f;border-radius:99px;position:relative;flex:0 0 auto;transition:.18s}
 .sw::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:.18s}
 .sw.on{background:#2fd07a}
 .sw.on::after{transform:translateX(21px)}
+
+.counter{display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0}
+.counter .n{font-size:76px;font-weight:800;min-width:120px;text-align:center;line-height:1}
+.counter .pm{width:60px;height:60px;border-radius:50%;background:#182130;border:1px solid #253243;
+  display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700}
+.counter .pm:active{background:#223044}
+.conf{border-radius:11px;padding:10px 12px;font-size:12.5px;margin:8px 0;line-height:1.45}
+.conf.hi{background:#08190f;border:1px solid #1c5a35;color:#6ee7a0}
+.conf.lo{background:#1a1508;border:1px solid #5a4a1a;color:#ffd98a}
+
+.exlist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.exopt{background:#0c1119;border:1px solid #1a2230;border-radius:11px;padding:12px;font-size:14px;font-weight:700}
+.exopt.sel{border-color:#2f7cf6;background:#101d2f}
+.exopt small{display:block;font-weight:500;color:#6c7d95;font-size:11px;margin-top:2px}
 
 .rest{position:fixed;inset:0;background:#070a0f;z-index:55;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px}
 .rest.on{display:flex}
@@ -96,14 +120,7 @@ select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9
 .rest.frozen .t{color:#4dabf7}
 .rest.go .t{color:#2fd07a}
 
-.teach{position:fixed;inset:0;background:rgba(7,10,15,.96);z-index:56;display:none;
-  flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
-.teach.on{display:flex}
-.teach .n{font-size:80px;font-weight:800;line-height:1}
-.teach .msg{font-size:17px;font-weight:700;max-width:340px;line-height:1.4}
-.teach .hint{font-size:13px;color:#6c7d95;max-width:330px;line-height:1.5}
-
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:100px;background:#1c2735;
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:104px;background:#1c2735;
   border:1px solid #2c3a4e;color:#e8edf5;padding:10px 16px;border-radius:12px;font-size:13px;
   font-weight:600;z-index:70;opacity:0;pointer-events:none;transition:.25s;max-width:88%;text-align:center}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}
@@ -113,7 +130,12 @@ select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9
 pre.dbg{background:#080c12;border:1px solid #18202c;border-radius:10px;padding:9px;font-size:10.5px;
   line-height:1.5;overflow-x:auto;color:#8fa0b8;margin:6px 0 0;font-family:ui-monospace,Menlo,monospace;white-space:pre}
 .hide{display:none!important}
-textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px solid #24303f;border-radius:10px;
+.wk{border-bottom:1px solid #17202c;padding:12px 0}
+.wk:last-child{border-bottom:0}
+.wk .h{display:flex;align-items:baseline;gap:8px;font-weight:700;font-size:14.5px}
+.wk .h .sp{flex:1}
+.wk .h span{font-size:11.5px;color:#6c7d95;font-weight:600}
+textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px solid #24303f;border-radius:10px;
   padding:9px;font-size:10.5px;font-family:ui-monospace,Menlo,monospace;-webkit-user-select:text;user-select:text}
 </style>
 </head>
@@ -128,48 +150,59 @@ textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px 
   </div>
 
   <div class="tabs" id="tabs">
-    <div class="tab act" data-m="0">🔴 Повтори</div>
-    <div class="tab" data-m="1">📡 Дані</div>
+    <div class="tab act" data-m="0">🏋️ Тренування</div>
+    <div class="tab" data-m="1">📚 Історія</div>
+    <div class="tab" data-m="2">📡 Дані</div>
   </div>
 
-  <!-- ============ ПОВТОРИ ============ -->
+  <!-- ============ ТРЕНУВАННЯ ============ -->
   <section id="p0">
-    <div class="card">
-      <div class="hd">Підхід <span class="sp"></span><span id="c_learn">не навчено</span></div>
-      <div class="big mono" id="c_reps">0</div>
-      <div class="sub" id="c_phase">чекаю рух</div>
-      <div class="bar"><i id="c_bar" style="width:0;background:#2f7cf6"></i></div>
+    <div class="golive" id="goLive">ПОЧАТИ ПІДХІД<span>або клік кнопкою на кришці</span></div>
+
+    <div class="card" id="liveCard">
+      <div class="hd">Підхід <span class="sp"></span><span id="l_ex">—</span></div>
+      <div class="big idle mono" id="l_reps">0</div>
+      <div class="sub" id="l_phase">натисни «почати підхід»</div>
+      <div class="bar"><i id="l_bar" style="width:0;background:#2f7cf6"></i></div>
       <div class="grid3">
-        <div class="cell"><div class="v mono" id="c_tempo">—</div><div class="k">опускання</div></div>
-        <div class="cell"><div class="v mono" id="c_period">—</div><div class="k">темп с/повт</div></div>
-        <div class="cell"><div class="v mono" id="c_power">—</div><div class="k">сила %</div></div>
+        <div class="cell"><div class="v mono" id="l_tempo">—</div><div class="k">опускання</div></div>
+        <div class="cell"><div class="v mono" id="l_per">—</div><div class="k">с/повтор</div></div>
+        <div class="cell"><div class="v mono" id="l_dur">0:00</div><div class="k">тривалість</div></div>
       </div>
-      <div class="reps" id="c_list"></div>
-      <div id="c_note"></div>
+      <div id="l_note"></div>
+    </div>
+
+    <div class="card">
+      <div class="hd">Сьогодні <span class="sp"></span><span id="w_clock" class="mono">0:00</span></div>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="w_sets">0</div><div class="k">підходів</div></div>
+        <div class="cell"><div class="v mono" id="w_reps">0</div><div class="k">повторів</div></div>
+        <div class="cell"><div class="v mono" id="w_ex">0</div><div class="k">вправ</div></div>
+      </div>
+      <div id="w_list" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- ============ ІСТОРІЯ ============ -->
+  <section id="p1" class="hide">
+    <div class="card">
+      <div class="hd">Мої вправи <span class="sp"></span><span class="hint">точність росте з виправлень</span></div>
+      <div id="h_ex"></div>
     </div>
     <div class="card">
-      <div class="hd">Сигнал <span class="sp"></span><span class="hint">зелені смуги = зараховані</span></div>
-      <canvas class="chart" id="cvS"></canvas>
-    </div>
-    <div class="card">
-      <div class="hd">Тренування <span class="sp"></span><span id="s_clock" class="mono">0:00</span></div>
-      <div class="grid3">
-        <div class="cell"><div class="v mono" id="s_sets">0</div><div class="k">підходів</div></div>
-        <div class="cell"><div class="v mono" id="s_reps">0</div><div class="k">повторів</div></div>
-        <div class="cell"><div class="v mono" id="s_tut">0с</div><div class="k">під вагою</div></div>
-      </div>
-      <pre class="dbg" id="s_log" style="margin-top:10px">Підходів ще немає.</pre>
+      <div class="hd">Тренування</div>
+      <div id="h_wk"></div>
     </div>
   </section>
 
   <!-- ============ ДАНІ ============ -->
-  <section id="p1" class="hide">
+  <section id="p2" class="hide">
     <div class="card">
-      <div class="hd">Вертикальний рух <span class="sp"></span><span id="d_hz" class="mono">—</span></div>
+      <div class="hd">Сигнал <span class="sp"></span><span id="d_hz" class="mono">—</span></div>
       <canvas class="chart" id="cvR"></canvas>
       <div class="grid3">
-        <div class="cell"><div class="v mono" id="d_sig">0.00</div><div class="k">сигнал, g</div></div>
-        <div class="cell"><div class="v mono" id="d_thr">0.00</div><div class="k">поріг, g</div></div>
+        <div class="cell"><div class="v mono" id="d_sig">0.00</div><div class="k">сигнал</div></div>
+        <div class="cell"><div class="v mono" id="d_thr">0.00</div><div class="k">поріг</div></div>
         <div class="cell"><div class="v mono" id="d_gyr">0</div><div class="k">гіро °/с</div></div>
       </div>
     </div>
@@ -186,8 +219,7 @@ textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px 
 
 <div class="dock"><div class="dockin">
   <div class="btn prim" id="bConn">Підключити<span class="s">Triki</span></div>
-  <div class="btn ok" id="bSet">Завершити<span class="s">підхід · 1 клік</span></div>
-  <div class="btn" id="bTeach">Навчити<span class="s">утримати кнопку</span></div>
+  <div class="btn ok" id="bSet">Почати підхід<span class="s">1 клік кнопкою</span></div>
   <div class="btn sq gh" id="bCfg">⚙</div>
 </div></div>
 
@@ -195,15 +227,28 @@ textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="lbl" id="r_lbl">відпочинок</div>
   <div class="t mono" id="r_t">1:30</div>
   <div class="btn gh" id="r_skip" style="margin-top:10px;padding:11px 26px">Пропустити</div>
-  <div class="hint" style="margin-top:12px;text-align:center">Поклади кришку магнітом догори — таймер завмре</div>
+  <div class="hint" style="margin-top:12px;text-align:center">Магнітом догори — таймер завмре</div>
 </div>
 
-<div class="teach" id="teach">
-  <div class="n mono" id="tc_n">1</div>
-  <div class="msg" id="tc_msg">Зроби ОДИН повтор так, як він має виглядати</div>
-  <div class="hint" id="tc_hint">Спокійно, з повною амплітудою. Апка запам'ятає ритм саме цієї вправи.</div>
-  <div class="btn gh" id="tc_x" style="padding:11px 26px">Скасувати</div>
-</div>
+<!-- ====== ПІСЛЯ ПІДХОДУ ====== -->
+<div class="sheet" id="post"><div class="sheetin">
+  <h2>Підхід закінчено<span class="sp"></span><span class="btn gh sq" id="postX" style="width:40px;padding:8px 0">✕</span></h2>
+  <div class="counter">
+    <div class="pm" id="pm_minus">−</div>
+    <div class="n mono" id="pm_n">0</div>
+    <div class="pm" id="pm_plus">+</div>
+  </div>
+  <div class="sub">повторень</div>
+  <div id="p_conf"></div>
+  <div class="hint" style="margin-top:10px">Яка це вправа?</div>
+  <div class="exlist" id="p_exlist"></div>
+  <div class="row" style="border:0"><input type="text" id="p_new" placeholder="або впиши нову назву"></div>
+  <div class="row" style="border:0">
+    <span class="btn ok" id="p_save" style="flex:2">Зберегти</span>
+    <span class="btn" id="p_drop" style="flex:1">Викинути</span>
+  </div>
+  <div id="p_learn"></div>
+</div></div>
 
 <div class="sheet" id="cfg"><div class="sheetin">
   <h2>Налаштування<span class="sp"></span><span class="btn gh sq" id="cfgX" style="width:40px;padding:8px 0">✕</span></h2>
@@ -212,20 +257,20 @@ textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Гучність</label><input type="range" id="oVol" min="0" max="100" value="30"></div>
   <div class="row"><label>Екран не гасне</label><div class="sw on" id="oWake"></div></div>
   <div class="row"><label>Відпочинок, с</label><input type="number" id="oRest" value="90" min="10" max="600" step="5"></div>
-  <div class="row"><label>Мін. час опускання, с<small>швидше — попередить. Не залежить від навченого повтору</small></label>
-    <input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
-  <div class="row"><label>Поріг втоми, %</label><input type="number" id="oFat" value="20" min="5" max="50" step="1"></div>
-  <div class="row"><label>Чутливість<small>більше — ловить дрібніші рухи</small></label>
-    <input type="range" id="oSens" min="10" max="90" value="50"></div>
-  <div class="row"><span class="btn" id="bForget" style="flex:1">Забути вправу</span>
-    <span class="btn" id="bReset" style="flex:1">Скинути сесію</span></div>
+  <div class="row"><label>Питати підтвердження<small>коли апка не впевнена в підрахунку</small></label><div class="sw on" id="oAsk"></div></div>
+  <div class="row"><label>Мін. час опускання, с</label><input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
+  <div class="row"><label>Авто-стоп підходу, с<small>тиша довше — підхід завершиться сам</small></label>
+    <input type="number" id="oIdle" value="12" min="4" max="60" step="1"></div>
+  <div class="row"><span class="btn" id="bEndWk" style="flex:1">Завершити тренування</span></div>
+  <div class="row"><span class="btn dan" id="bWipe" style="flex:1">Стерти всі дані</span></div>
   <div class="hint" style="margin-top:12px">
-    <b>Кнопка на кришці</b> — єдине керування:<br>
-    1 клік — завершити підхід і почати відпочинок<br>
-    2 кліки — прибрати останній зайвий повтор<br>
-    утримати ~1.2 с — навчити повтор нової вправи<br><br>
-    Постукування вимкнено навмисно: воно плуталося зі стороннім дрижанням.<br><br>
-    <b>iOS:</b> потрібен браузер <b>Bluefy</b>. Якщо Triki не видно — розбуди його кнопкою.
+    <b>Кнопка на кришці:</b><br>
+    1 клік — почати / завершити підхід<br>
+    2 кліки — скасувати підхід (не рахувати)<br>
+    утримати ~1.2 с — завершити тренування<br><br>
+    Поза підходом апка нічого не рахує — тому ходьба між тренажерами
+    й підняття снаряда не потрапляють у статистику.<br><br>
+    <b>iOS:</b> потрібен <b>Bluefy</b>. Не видно Triki — розбуди кнопкою.
   </div>
 </div></div>
 
@@ -239,23 +284,28 @@ textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px 
 
 <script>
 "use strict";
-/* ═══════════════════════════════════════════════════════════════════
-   IronCap v2 — рахуємо повторення, і тільки.
+/* ══════════════════════════════════════════════════════════════════════
+   IronCap v3
 
-   Що змінилось після аналізу реального запису (888 с, 23841 семплів):
-   • Інтегрування швидкості ВИКИНУТО з підрахунку. У тих даних воно
-     розганялось до 15.4 м/с (реальна штанга — до ~2), бо між кадрами
-     траплялись паузи до 423 мс при прискореннях до 10.7 g. Саме через
-     це повтори сипались пачками по кілька за секунду.
-   • Тепер повтор = один ЦИКЛ коливання вертикального прискорення.
-     Смуговий фільтр + адаптивний поріг + рефрактерний період.
-     Дрейфу немає в принципі, бо нічого не інтегрується.
-   • Частота виявилась ~62 Гц, не 104, з рваним кроком → крок часу
-     затискається, а на розриві фільтри скидаються.
-   • Тапи прибрано: друк на клавіатурі поруч давав сильніший сплеск,
-     ніж сам тап. Керування — лише кнопка на кришці.
-   • Режим «Рівень» прибрано.
-   ═══════════════════════════════════════════════════════════════════ */
+   Три зміни порівняно з v2, усі за підсумками розмічених записів:
+
+   1. ПІДХІД ТЕПЕР ЯВНИЙ. Лічильник працює лише між «почати» і
+      «завершити». Ходьба між тренажерами, підняття снаряда і
+      вставання з крісла більше не можуть потрапити в підрахунок —
+      не порогами, а за побудовою. На тих записах саме ці ділянки
+      давали всі хибні спрацювання.
+
+   2. БІБЛІОТЕКА ВПРАВ. Кожна вправа зберігає власні параметри
+      детектора. Кріплення (гриф / блок / збоку) значення не має:
+      вертикаль береться з напрямку гравітації.
+
+   3. НАВЧАННЯ З ВИПРАВЛЕНЬ. Сирий сигнал підходу зберігається. Коли
+      ти кажеш «було 10, а не 9», апка переганяє ЦЕЙ САМИЙ сигнал
+      через перебір параметрів і шукає ті, що дають 10 — перевіряючи
+      їх одночасно на всіх попередніх розмічених підходах цієї вправи.
+      Це не нейромережа, а підгонка параметрів під твою розмітку:
+      працює з одного прикладу, пояснювана і не потребує сервера.
+   ══════════════════════════════════════════════════════════════════════ */
 
 const NUS='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const C_W='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
@@ -264,38 +314,102 @@ const C_LED='6e400004-b5a3-f393-e0a9-e50e24dcca9e';
 const INIT1=Uint8Array.of(0x01,0x00);
 const INIT2=Uint8Array.of(0x20,0x10,0x00,0xD0,0x07,0x68,0x00,0x03);
 const ACC_LSB=2048.0, GYR_LSB=131.0, G_MS2=9.80665;
-
-const DT_MIN=0.004, DT_MAX=0.20;      // затиск кроку часу
-const GAP_RESET=0.35;                 // більша пауза — скидаємо фільтри
-const PER_MIN=0.70, PER_MAX=9.0;      // межі тривалості повтору, с
-const AMP_FLOOR=0.048;                // підлога порогу (одиниці псевдошвидкості)
+const DT_MIN=0.004, DT_MAX=0.20, GAP_RESET=0.35;
+const DEF={sens:0.90, perMin:0.70, floor:0.048};   // підібрано на розмічених даних
+const PER_MAX=9.0;
 
 const $=id=>document.getElementById(id);
 const now=()=>performance.now()/1000;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 
-const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,fat:20,sens:50};
-try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg2')||'{}'));}catch(e){}
-const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg2',JSON.stringify(CFG));}catch(e){}};
+const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:12};
+try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg3')||'{}'));}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg3',JSON.stringify(CFG));}catch(e){}};
 
-let TPL=null;   // навчена вправа {per, amp, ecc}
-try{TPL=JSON.parse(localStorage.getItem('ironcap.tpl')||'null');}catch(e){}
+/* ══ БАЗА: вправи + тренування ══ */
+let DB={ex:{},wk:[]};
+try{ const d=JSON.parse(localStorage.getItem('ironcap.db')||'null'); if(d&&d.ex) DB=d; }catch(e){}
+function saveDB(){
+  try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); }
+  catch(e){ // переповнення — викидаємо найстаріші сирі сигнали
+    for(const k in DB.ex){ const s=DB.ex[k].samples||[]; while(s.length>2) s.shift(); }
+    try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); }catch(e2){ toast('Пам\'ять переповнена'); }
+  }
+}
+
+/* ══ ДЕТЕКТОР — один і той самий код для живого і для перебору ══
+   Саме це гарантує, що навчання підбирає параметри для того самого
+   алгоритму, який потім рахує наживо.                              */
+function makeDetector(p){
+  const P=Object.assign({},DEF,p||{});
+  let fast=0,slow=0,pv=0,pvHi=0,pvLo=0,rms=0,st=0,tFlip=0,tCycle=0,tDown=0,last=-99;
+  let halfUp=0,halfDn=0;
+  return {
+    thr:0, sig:0,
+    reset(){ fast=slow=pv=pvHi=pvLo=0; st=0; tCycle=0; tDown=0; },
+    /* повертає {rep:true, per, ecc} на завершенні повного циклу */
+    push(aV,dt,t,gap){
+      if(gap) this.reset();
+      fast+=(1-Math.exp(-dt/0.12))*(aV-fast);
+      slow+=(1-Math.exp(-dt/1.2))*(aV-slow);
+      const acc=fast-slow;
+      pv  += acc*G_MS2*dt;
+      pvHi+= (1-Math.exp(-dt/1.0))*(pv-pvHi);
+      pvLo+= (1-Math.exp(-dt/0.10))*(pv-pvLo);
+      const sig=pvLo-pvHi; this.sig=sig;
+      rms+=(1-Math.exp(-dt/3.0))*(sig*sig-rms);
+      const thr=Math.max(P.floor,Math.sqrt(Math.max(rms,1e-9))*P.sens); this.thr=thr;
+      let out=null;
+      // Повтор = спуск, а потім підйом. Зараховуємо на перетині ВГОРУ,
+      // що йде після спуску — включно з найпершим. Раніше найперший
+      // лише відкривав цикл, тому 10 повторів давали рівно 9.
+      if(st<=0 && sig>thr){
+        if(st===-1){
+          halfDn=t-tFlip;
+          // період: від попереднього підйому, а для найпершого —
+          // подвоєна тривалість спуску (інших даних ще немає)
+          const per = tCycle>0 ? t-tCycle : (t-tDown)*2;
+          if(per>=P.perMin && per<=PER_MAX && t-last>=P.perMin){
+            last=t; out={rep:true,per:per,ecc:Math.max(halfUp,halfDn)};
+          }
+          tCycle=t;
+        }
+        st=1; tFlip=t;
+      } else if(st>=0 && sig<-thr){
+        if(st===1) halfUp=t-tFlip;
+        tDown=t; st=-1; tFlip=t;
+      }
+      if(st!==0 && t-tFlip>PER_MAX){ st=0; tCycle=0; }
+      return out;
+    }
+  };
+}
+/* офлайн-прогін збереженого сигналу */
+function countOffline(rec,p){
+  const d=makeDetector(p); const reps=[];
+  let t=0;
+  for(let i=0;i<rec.length;i++){
+    const dt=rec[i][0]/1000, aV=rec[i][1];
+    t+=dt;
+    const r=d.push(aV,clamp(dt,DT_MIN,DT_MAX),t,dt>GAP_RESET);
+    if(r) reps.push({t:t,per:r.per,ecc:r.ecc});
+  }
+  return reps;
+}
 
 const S={
   mode:0, dev:null, chW:null, chLed:null, connected:false,
   tLast:0, hz:0, pkTotal:0, pkFrames:0,
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
-  aV:0, sig:0, fast:0, slow:0, rms:0, thr:0, pv:0, pvHi:0, pvLo:0,
-  motion:0, motionEma:0, stillT:0, moveT:0,
-  st:0, tFlip:0, tCycle:0, halfUp:0, halfDn:0, lastRep:-99,
-  reps:[], tut:0, base:null, fatigued:false,
-  sets:0, allReps:0, allTut:0, hist:[], log:[], t0:now(), running:false,
+  aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
+  det:null, live:false, setT0:0, setRec:[], setReps:[], lastMove:0,
+  wk:null, log:[], t0:now(), running:false,
   btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false,
-  restOn:false, restLeft:0, restFrozen:false, capAxis:2, capSign:1,
-  teach:false, teachRep:null
+  restOn:false, restLeft:0, restFrozen:false,
+  pend:null, pendN:0, pendEx:null
 };
 
-/* ══ АУДІО: ambient + низький gain, щоб музика не спинялась ══ */
+/* ══ АУДІО (ambient — щоб музика не спинялась) ══ */
 let AC=null,MASTER=null;
 function audioInit(){ if(AC)return;
   try{ if(navigator.audioSession) navigator.audioSession.type='ambient'; }catch(e){}
@@ -306,17 +420,16 @@ function audioResume(){ audioInit(); if(AC&&AC.state!=='running') AC.resume().ca
 function beep(f=880,d=.09,type='sine',g=1){
   if(CFG.audio==='off')return; audioResume(); if(!AC)return;
   const t=AC.currentTime,o=AC.createOscillator(),gn=AC.createGain();
-  o.type=type; o.frequency.value=f;
-  gn.gain.setValueAtTime(0,t); gn.gain.linearRampToValueAtTime(g,t+.008);
+  o.type=type;o.frequency.value=f;
+  gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(g,t+.008);
   gn.gain.exponentialRampToValueAtTime(.0001,t+d);
-  o.connect(gn); gn.connect(MASTER); o.start(t); o.stop(t+d+.02);
+  o.connect(gn);gn.connect(MASTER);o.start(t);o.stop(t+d+.02);
 }
 const sfxRep=()=>beep(1180,.07,'sine',.9);
 const sfxSlow=()=>{beep(320,.13,'square',.8);setTimeout(()=>beep(320,.13,'square',.8),150);};
-const sfxSet=()=>{beep(660,.1);setTimeout(()=>beep(880,.15),110);};
-const sfxGong=()=>{beep(196,.9,'triangle',1);setTimeout(()=>beep(147,1.1,'triangle',.8),60);};
+const sfxStart=()=>{beep(520,.09);setTimeout(()=>beep(780,.12),100);};
+const sfxStop=()=>{beep(780,.09);setTimeout(()=>beep(520,.14),100);};
 const sfxGo=()=>{beep(880,.13);setTimeout(()=>beep(1320,.2),150);};
-const sfxUndo=()=>beep(420,.14,'square',.7);
 let lastSay=0;
 function say(txt,force){
   if(CFG.audio!=='voice')return;
@@ -324,19 +437,18 @@ function say(txt,force){
   try{const u=new SpeechSynthesisUtterance(txt);u.lang='uk-UA';u.rate=1.12;
       u.volume=clamp(CFG.vol/100+.15,0,1);speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
 }
-let ledOn=0,ledBusy=false;
-function led(v){ v=v?1:0; if(!S.chLed||ledOn===v||ledBusy)return; ledOn=v; ledBusy=true;
-  S.chLed.writeValue(Uint8Array.of(v)).catch(()=>{}).then(()=>{ledBusy=false;}); }
-let toastT=0;
+let ledS=0,ledB=false;
+function led(v){v=v?1:0;if(!S.chLed||ledS===v||ledB)return;ledS=v;ledB=true;
+  S.chLed.writeValue(Uint8Array.of(v)).catch(()=>{}).then(()=>{ledB=false;});}
+let tT=0;
 function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');
-  clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),1900);}
+  clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),2000);}
 
 /* ══ BLE ══ */
 async function connect(){
   if(!navigator.bluetooth){toast('Потрібен Bluefy — Safari не вміє Web Bluetooth');return;}
   audioResume();
-  try{
-    setStat('шукаю…','warn');
+  try{ setStat('шукаю…','warn');
     const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[NUS,'battery_service']});
     S.dev=dev; dev.addEventListener('gattserverdisconnected',onDisc); await attach(dev);
   }catch(e){ setStat('не підключено'); if(e&&e.name!=='NotFoundError') toast('Помилка: '+(e.message||e)); }
@@ -353,19 +465,18 @@ async function attach(dev){
   const wr=v=>S.chW.writeValueWithoutResponse?S.chW.writeValueWithoutResponse(v):S.chW.writeValue(v);
   await wr(INIT1); await new Promise(r=>setTimeout(r,120));
   try{ await wr(INIT2); }catch(e){}
-  S.connected=true; S.running=true; S.t0=now();
+  S.connected=true; S.running=true;
   setStat(dev.name||'Triki','on');
   $('bConn').innerHTML='Відключити<span class="s">'+((dev.name||'Triki').slice(0,12))+'</span>';
   $('bConn').classList.replace('prim','dan');
   battery(srv); wakeLock(); say('Підключено');
 }
 async function battery(srv){
-  try{ const bs=await srv.getPrimaryService('battery_service');
+  try{const bs=await srv.getPrimaryService('battery_service');
     const bc=await bs.getCharacteristic('battery_level');
     const u=v=>$('chBat').innerHTML='🔋 <b>'+v+'%</b>';
     u((await bc.readValue()).getUint8(0)); await bc.startNotifications();
-    bc.addEventListener('characteristicvaluechanged',e=>u(e.target.value.getUint8(0)));
-  }catch(e){}
+    bc.addEventListener('characteristicvaluechanged',e=>u(e.target.value.getUint8(0)));}catch(e){}
 }
 function onDisc(){
   S.connected=false; setStat('зв\'язок втрачено','err'); toast('Triki відключився');
@@ -374,13 +485,13 @@ function onDisc(){
   if(S.dev) setTimeout(()=>{ if(!S.connected&&S.dev) attach(S.dev).catch(()=>{}); },2500);
 }
 function disconnect(){
-  try{ S.dev&&S.dev.gatt&&S.dev.gatt.connected&&S.dev.gatt.disconnect(); }catch(e){}
+  try{S.dev&&S.dev.gatt&&S.dev.gatt.connected&&S.dev.gatt.disconnect();}catch(e){}
   S.connected=false; setStat('не підключено');
   $('bConn').innerHTML='Підключити<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
 }
 function setStat(t,c){ $('stat').textContent=t; $('dot').className='dot'+(c?' '+c:''); }
 
-/* ══ ПАРСЕР: кадр 14 Б, хедер 22 00 / 22 01, гіро → аксель ══ */
+/* ══ ПАРСЕР ══ */
 function onNotify(e){
   const dv=e.target.value,n=dv.byteLength; S.pkTotal++;
   let i=0;
@@ -391,320 +502,374 @@ function onNotify(e){
 }
 function frame(dv,o,btn){
   const t=now();
-  let raw=S.tLast?t-S.tLast:0.016;
-  S.tLast=t;
-  const gap=raw>GAP_RESET;
-  const dt=clamp(raw,DT_MIN,DT_MAX);      // ЗАТИСК: 423-мс дірки більше не інтегруються
+  let raw=S.tLast?t-S.tLast:0.016; S.tLast=t;
+  const gap=raw>GAP_RESET, dt=clamp(raw,DT_MIN,DT_MAX);
   S.hz+=.02*(1/dt-S.hz); S.pkFrames++;
   const g=[dv.getInt16(o,true),dv.getInt16(o+2,true),dv.getInt16(o+4,true)];
   const a=[dv.getInt16(o+6,true),dv.getInt16(o+8,true),dv.getInt16(o+10,true)];
   button(btn,t);
-  physics(a,g,dt,t,gap);
+  physics(a,g,dt,t,gap,raw);
 }
 
 /* ══ ФІЗИКА ══ */
-function physics(a,g,dt,t,gap){
+function physics(a,g,dt,t,gap,raw){
   if(!S.gInit){ S.grav=[a[0],a[1],a[2]]; S.gyBias=[g[0],g[1],g[2]]; S.gInit=true; }
-  if(gap){ S.fast=S.slow=S.sig=S.pv=S.pvHi=S.pvLo=0; S.st=0; }  // на розриві не вигадуємо
-
   const tauG=(S.stillT>.25)?0.3:2.0;
   const kG=1-Math.exp(-dt/tauG);
   for(let i=0;i<3;i++) S.grav[i]+=kG*(a[i]-S.grav[i]);
-
   const lin=[a[0]-S.grav[0],a[1]-S.grav[1],a[2]-S.grav[2]];
   const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
   S.motion=Math.hypot(lin[0],lin[1],lin[2])/S.gn;
   S.motionEma+=(1-Math.exp(-dt/0.6))*(S.motion-S.motionEma);
-
   if(S.motionEma<.03&&S.motion<.05){ for(let i=0;i<3;i++) S.gyBias[i]+=.04*(g[i]-S.gyBias[i]); }
   S.gyRate+=.25*(Math.hypot(g[0]-S.gyBias[0],g[1]-S.gyBias[1],g[2]-S.gyBias[2])/GYR_LSB-S.gyRate);
-
   const still=S.motionEma<.022&&S.motion<.05&&S.gyRate<8;
-  if(still){ S.stillT+=dt; S.moveT=0; S.gn+=.02*(gl-S.gn);
+  if(still){ S.stillT+=dt; S.gn+=.02*(gl-S.gn);
     let mx=0,ix=2; for(let i=0;i<3;i++) if(Math.abs(S.grav[i])>mx){mx=Math.abs(S.grav[i]);ix=i;}
     if(mx>gl*.85){ S.capAxis=ix; S.capSign=S.grav[ix]>0?1:-1; }
-  } else { S.moveT+=dt; S.stillT=0; }
+  } else S.stillT=0;
 
-  // вертикальна складова, у g
+  // вертикаль — з напрямку гравітації, тому кріплення довільне
   const u=[S.grav[0]/gl,S.grav[1]/gl,S.grav[2]/gl];
   S.aV=(lin[0]*u[0]+lin[1]*u[1]+lin[2]*u[2])/S.gn;
 
-  // смуговий фільтр прискорення: прибрати шум (0.12 с) і дрейф (1.2 с)
-  S.fast+=(1-Math.exp(-dt/0.12))*(S.aV-S.fast);
-  S.slow+=(1-Math.exp(-dt/1.2))*(S.aV-S.slow);
-  const acc=S.fast-S.slow;
+  if(S.live){
+    S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4)]);
+    const r=S.det.push(S.aV,dt,t,gap);
+    if(r) onRep(r,t);
+    if(!still) S.lastMove=t;
+    if(t-S.lastMove>CFG.idle) endSet(true);      // авто-стоп на тиші
+  } else if(S.det){ S.det.push(S.aV,dt,t,gap); } // тримаємо фільтри теплими
 
-  // ПСЕВДОШВИДКІСТЬ. У прискоренні на один присід припадає ДВА
-  // додатні горби (розгін і гальмування в кожній фазі), тому по ньому
-  // цикл виходив подвійним. Після інтегрування на повтор лишається
-  // рівно один цикл. Другий смуговий фільтр прибиває дрейф інтеграла.
-  // На розмічених даних це знизило сумарну похибку з 26 до 10,
-  // а хибні спрацювання на ходьбі — з 18 до 2.
-  S.pv  += acc*G_MS2*dt;
-  S.pvHi+= (1-Math.exp(-dt/1.0))*(S.pv-S.pvHi);
-  S.pvLo+= (1-Math.exp(-dt/0.10))*(S.pv-S.pvLo);
-  S.sig  = S.pvLo-S.pvHi;
-
-  // адаптивний поріг з ковзного СКО
-  S.rms+=(1-Math.exp(-dt/3.0))*(S.sig*S.sig-S.rms);
-  const sens=1.4-CFG.sens/100;                        // 50 → 0.9 (підібрано)
-  const ampMin=TPL? Math.max(AMP_FLOOR,TPL.amp*0.40) : AMP_FLOOR;
-  S.thr=Math.max(ampMin,Math.sqrt(Math.max(S.rms,1e-9))*sens);
-
-  counter(dt,t);
   restLogic(dt,t);
   charts();
   if(S.running&&S.log.length<160000&&(S.pkFrames&1)===0)
-    S.log.push([Date.now(),+S.aV.toFixed(4),+S.sig.toFixed(4),+S.thr.toFixed(4),S.reps.length]);
+    S.log.push([Date.now(),+S.aV.toFixed(4),+(S.det?S.det.sig:0).toFixed(4),
+                +(S.det?S.det.thr:0).toFixed(4),S.live?S.setReps.length:0]);
 }
 
-/* ══ ЛІЧИЛЬНИК: цикл коливання, без інтегрування ══ */
-function counter(dt,t){
-  if(S.st!==0) S.tut+=dt, S.allTut+=dt;
-  const s=S.sig, th=S.thr;
-  const perMin=TPL? Math.max(PER_MIN,TPL.per*0.45) : PER_MIN;
-  const perMax=TPL? Math.min(PER_MAX,TPL.per*2.6)  : PER_MAX;
-
-  // ПОВТОР = ПОВНИЙ ЦИКЛ, тобто повернення до того самого напрямку.
-  // Раніше зараховувалось на кожній зміні напрямку — а їх у повторі
-  // дві (вниз і вгору), тому виходило рівно вдвічі більше.
-  if(S.st<=0 && s>th){                      // перетин угору
-    if(S.st===-1){
-      S.halfDn=t-S.tFlip;
-      if(S.tCycle>0) cycleDone(t, t-S.tCycle, perMin, perMax);
-    }
-    S.tCycle=t; S.st=1; S.tFlip=t;
-  } else if(S.st>=0 && s<-th){              // перетин униз — лише півцикла
-    if(S.st===1) S.halfUp=t-S.tFlip;
-    S.st=-1; S.tFlip=t;
-  }
-  // довга тиша — підхід скінчився, скидаємо фазу
-  if(S.st!==0 && t-S.tFlip>perMax){ S.st=0; S.tCycle=0; }
+/* ══ ПІДХІД ══ */
+function startSet(){
+  if(S.live) return;
+  if(!S.connected && !demoT){ toast('Спершу підключи Triki'); beep(300,.12); return; }
+  S.live=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
+  S.det=makeDetector(currentParams());
+  sfxStart(); say('Пішли',true); led(true);
+  $('goLive').innerHTML='ЗАВЕРШИТИ ПІДХІД<span>клік кнопкою · 2 кліки — скасувати</span>';
+  $('goLive').classList.add('stop');
+  $('bSet').innerHTML='Завершити<span class="s">підхід</span>';
+  $('l_reps').classList.remove('idle');
 }
-function cycleDone(t,per,perMin,perMax){
-  if(per<perMin||per>perMax) return;
-  if(t-S.lastRep<perMin) return;            // рефрактерний період
-  S.lastRep=t;
-  if(S.teach){ learnRep(per,t); return; }
-  addRep(per,t);
+function currentParams(){
+  const ex=S.pendEx&&DB.ex[S.pendEx];
+  return ex&&ex.params?ex.params:DEF;
 }
-function addRep(per,t){
-  // темп опускання — вимірюється із самого сигналу, НЕЗАЛЕЖНО від навченого
-  const ecc=Math.max(S.halfUp,S.halfDn) || per/2;
-  const slow=ecc>=CFG.ecc;
-  const amp=Math.sqrt(Math.max(S.rms,1e-9));
-  const rep={n:S.reps.length+1,per:per,ecc:ecc,amp:amp,fast:!slow,pct:100};
-  S.reps.push(rep); S.allReps++;
-  S.base=Math.max.apply(null,S.reps.map(r=>r.amp));
-  S.reps.forEach(r=>r.pct=Math.round(clamp(r.amp/S.base,0,1.6)*100));
+function onRep(r,t){
+  S.setReps.push({t:t,per:r.per,ecc:r.ecc});
   sfxRep();
-  if(!slow) setTimeout(()=>{sfxSlow();say('Повільніше');},120);
-  if(S.reps.length>=4 && rep.pct<100-CFG.fat && !S.fatigued){
-    S.fatigued=true; setTimeout(()=>{sfxGong();say('Виснаження. Став вагу',true);},220);
-  }
-  renderReps();
+  if(r.ecc>0 && r.ecc<CFG.ecc) setTimeout(()=>{sfxSlow();say('Повільніше');},120);
 }
-function undoRep(){
-  if(!S.reps.length){ toast('Нема чого прибирати'); beep(300,.12); return; }
-  S.reps.pop(); S.allReps=Math.max(0,S.allReps-1);
-  S.reps.forEach((r,i)=>r.n=i+1);
-  if(S.reps.length){ S.base=Math.max.apply(null,S.reps.map(r=>r.amp));
-    S.reps.forEach(r=>r.pct=Math.round(clamp(r.amp/S.base,0,1.6)*100)); }
-  else S.base=null;
-  sfxUndo(); toast('Повтор прибрано'); renderReps();
+function cancelSet(){
+  if(!S.live) return;
+  S.live=false; led(false); sfxStop(); toast('Підхід скасовано');
+  resetLiveUI();
+}
+function resetLiveUI(){
+  $('goLive').innerHTML='ПОЧАТИ ПІДХІД<span>або клік кнопкою на кришці</span>';
+  $('goLive').classList.remove('stop');
+  $('bSet').innerHTML='Почати підхід<span class="s">1 клік кнопкою</span>';
+  $('l_reps').classList.add('idle');
+}
+function endSet(auto){
+  if(!S.live) return;
+  S.live=false; led(false);
+  const dur=now()-S.setT0, n=S.setReps.length;
+  resetLiveUI();
+  if(n<1){ toast(auto?'Підхід порожній — скасовано':'Жодного повтору'); beep(300,.12); return; }
+  sfxStop();
+  S.pend={reps:S.setReps.slice(),rec:S.setRec.slice(),dur:dur,ts:Date.now()};
+  S.pendN=n;
+  const c=confidence(S.setReps,S.pendEx);
+  S.pend.conf=c;
+  say(n+' повторень',true);
+  // впевнені + вправа відома + дозволено — пишемо мовчки
+  if(c>=0.80 && S.pendEx && !CFG.ask){ commitSet(S.pendEx,n,false); return; }
+  if(c>=0.80 && S.pendEx){ commitSet(S.pendEx,n,false); return; }
+  openPost();
+}
+/* впевненість: рівність ритму + збіг із відомим темпом вправи */
+function confidence(reps,exName){
+  if(reps.length<3) return 0.35;
+  const iv=[]; for(let i=1;i<reps.length;i++) iv.push(reps[i].t-reps[i-1].t);
+  const m=iv.reduce((a,b)=>a+b,0)/iv.length;
+  const sd=Math.sqrt(iv.reduce((a,b)=>a+(b-m)*(b-m),0)/iv.length);
+  let c=clamp(1-(sd/m)*2.2,0,1);
+  const ex=exName&&DB.ex[exName];
+  if(ex&&ex.per) c*=clamp(1-Math.abs(Math.log(m/ex.per))*1.2,0.3,1);
+  return c;
 }
 
-/* ══ НАВЧАННЯ ВПРАВИ ══ */
-function teachStart(){
-  S.teach=true; S.teachRep=[]; $('teach').classList.add('on');
-  $('tc_n').textContent='1'; $('tc_msg').textContent='Зроби ОДИН повтор так, як він має виглядати';
-  audioResume(); say('Зроби один повтор',true);
+/* ══ ЛИСТ ПІСЛЯ ПІДХОДУ ══ */
+function openPost(){
+  $('pm_n').textContent=S.pendN;
+  const c=S.pend.conf;
+  $('p_conf').innerHTML = c>=0.8
+    ? '<div class="conf hi">Ритм рівний — швидше за все підрахунок правильний. Якщо ні, виправ і я перевчуся.</div>'
+    : '<div class="conf lo">Ритм нерівний, я не впевнений. Постав справжню кількість — саме з таких виправлень я і вчуся.</div>';
+  const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
+  $('p_exlist').innerHTML=names.map(n=>{
+    const e=DB.ex[n];
+    return '<div class="exopt'+(n===S.pendEx?' sel':'')+'" data-ex="'+esc(n)+'">'+esc(n)
+      +'<small>'+(e.used||0)+' підходів · '+(e.labels||0)+' виправлень'
+      +(e.per?(' · '+e.per.toFixed(1)+' с/повт'):'')+'</small></div>';
+  }).join('')||'<div class="hint">Ще жодної вправи — впиши назву нижче.</div>';
+  $('p_new').value='';
+  $('p_learn').innerHTML='';
+  $('post').classList.add('on');
 }
-function teachStop(){ S.teach=false; $('teach').classList.remove('on'); }
-function learnRep(per,t){
-  S.teachRep.push({per:per,amp:Math.sqrt(Math.max(S.rms,1e-9)),ecc:Math.max(S.halfUp,S.halfDn)});
-  beep(1320,.1);
-  const n=S.teachRep.length;
-  if(n<3){
-    $('tc_n').textContent=String(n+1);
-    $('tc_msg').textContent='Ще '+(3-n)+' такий(х) повтор'+(3-n===1?'':'и');
-    return;
-  }
-  // медіана з трьох — стійка до одного кривого
-  const md=k=>{const v=S.teachRep.map(x=>x[k]).sort((a,b)=>a-b);return v[1];};
-  TPL={per:md('per'),amp:md('amp'),ecc:md('ecc')};
-  try{localStorage.setItem('ironcap.tpl',JSON.stringify(TPL));}catch(e){}
-  teachStop(); sfxSet();
-  toast('Вправу вивчено: '+TPL.per.toFixed(1)+' с/повт');
-  say('Вправу вивчено',true);
-  S.reps=[]; S.base=null; S.fatigued=false; renderReps();
-}
-function forgetTpl(){ TPL=null; try{localStorage.removeItem('ironcap.tpl');}catch(e){}
-  toast('Вправу забуто'); }
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* ══ ПІДХІД І ВІДПОЧИНОК ══ */
-function endSet(){
-  if(!S.reps.length){ toast('Підхід порожній'); beep(300,.12); return; }
-  const n=S.reps.length;
-  const per=S.reps.map(r=>r.per).sort((a,b)=>a-b)[n>>1];
-  const drop=S.base?Math.round((1-S.reps[n-1].amp/S.base)*100):0;
-  S.sets++;
-  S.hist.push({set:S.sets,reps:n,per:per,tut:Math.round(S.tut),drop:Math.max(0,drop)});
-  sfxSet(); say(n+' повторень',true);
-  toast('Підхід '+S.sets+': '+n+' повт · '+per.toFixed(1)+' с/повт');
-  S.reps=[];S.base=null;S.fatigued=false;S.tut=0;S.st=0;
-  renderReps(); renderHist(); startRest();
+function commitSet(exName,n,corrected){
+  const p=S.pend; if(!p) return;
+  if(!DB.ex[exName]) DB.ex[exName]={params:Object.assign({},DEF),used:0,labels:0,samples:[],per:0};
+  const ex=DB.ex[exName];
+  ex.used=(ex.used||0)+1;
+  const iv=[]; for(let i=1;i<p.reps.length;i++) iv.push(p.reps[i].t-p.reps[i-1].t);
+  if(iv.length){ const m=iv.reduce((a,b)=>a+b,0)/iv.length;
+    ex.per=ex.per?ex.per*0.7+m*0.3:m; }
+  if(!S.wk) S.wk={start:Date.now(),sets:[]};
+  const ecc=p.reps.map(r=>r.ecc).filter(x=>x>0);
+  S.wk.sets.push({ex:exName,reps:n,dur:Math.round(p.dur),ts:p.ts,man:corrected,
+    ecc:ecc.length?+(ecc.reduce((a,b)=>a+b,0)/ecc.length).toFixed(1):0});
+  let msg='';
+  if(corrected){
+    ex.labels=(ex.labels||0)+1;
+    ex.samples=ex.samples||[];
+    ex.samples.push({rec:downsample(p.rec),truth:n});
+    while(ex.samples.length>6) ex.samples.shift();     // пам'ять не безмежна
+    msg=retune(exName);
+  }
+  S.pendEx=exName; S.pend=null;
+  saveDB(); renderWk(); renderHist();
+  $('post').classList.remove('on');
+  toast(exName+': '+n+' повторень');
+  if(msg) setTimeout(()=>toast(msg),2200);
+  startRest();
 }
+function downsample(rec){
+  const out=[]; let acc=0;
+  for(let i=0;i<rec.length;i++){ acc+=rec[i][0];
+    if(i%2===1){ out.push([acc,rec[i][1]]); acc=0; } }
+  return out;
+}
+
+/* ══ НАВЧАННЯ: підбір параметрів під ТВОЮ розмітку ══
+   Перебираємо сітку і шукаємо параметри, які дають правильну
+   кількість на ВСІХ розмічених підходах цієї вправи, а не лише
+   на останньому. За рівних результатів беремо найближчі до типових. */
+function retune(exName){
+  const ex=DB.ex[exName], sm=ex.samples||[];
+  if(!sm.length) return '';
+  let best=null;
+  for(let sens=0.50;sens<=1.65;sens+=0.05){
+    for(let pm=0.50;pm<=1.65;pm+=0.10){
+      for(let fl=0.030;fl<=0.080;fl+=0.010){
+        const p={sens:+sens.toFixed(2),perMin:+pm.toFixed(2),floor:+fl.toFixed(3)};
+        let err=0;
+        for(const s of sm) err+=Math.abs(countOffline(s.rec,p).length-s.truth);
+        // Серед однаково точних беремо НАЙКОНСЕРВАТИВНІШІ: вищий поріг
+        // чутливості й вища підлога. Розмічені підходи дають лише
+        // позитивні приклади, тож без цього перебір повзе в бік
+        // надчутливості й починає ловити сторонній рух.
+        const cons=p.sens+p.floor*10+p.perMin*0.3;
+        if(!best||err<best.err||(err===best.err&&cons>best.cons)) best={p:p,err:err,cons:cons};
+      }
+    }
+  }
+  if(!best) return '';
+  ex.params=best.p;
+  const tot=sm.reduce((a,s)=>a+s.truth,0);
+  return best.err===0
+    ? 'Вивчив «'+exName+'»: тепер сходиться на всіх '+sm.length+' розмічених підходах'
+    : 'Вивчив «'+exName+'»: похибка '+best.err+' з '+tot+' повторів';
+}
+
+/* ══ ВІДПОЧИНОК ══ */
 function startRest(){ S.restOn=true;S.restLeft=CFG.rest;S.restFrozen=false;
-  $('rest').classList.add('on'); $('rest').classList.remove('frozen','go'); $('r_lbl').textContent='відпочинок'; }
-function stopRest(done){ S.restOn=false; $('rest').classList.remove('on','frozen','go');
-  if(done){ sfxGo(); say('Старт',true); } }
+  $('rest').classList.add('on');$('rest').classList.remove('frozen','go');$('r_lbl').textContent='відпочинок'; }
+function stopRest(done){ S.restOn=false;$('rest').classList.remove('on','frozen','go');
+  if(done){sfxGo();say('Старт',true);} }
 function restLogic(dt,t){
   if(!S.restOn)return;
   const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
   const nrm=S.grav[S.capAxis]/gl;
-  const frozen=Math.abs(nrm)>.8&&S.stillT>.4&&(nrm*S.capSign<0);
-  if(frozen!==S.restFrozen){ S.restFrozen=frozen;
-    $('rest').classList.toggle('frozen',frozen);
-    $('r_lbl').textContent=frozen?'ПАУЗА · магніт догори':'відпочинок'; beep(frozen?420:760,.1); }
+  const fr=Math.abs(nrm)>.8&&S.stillT>.4&&(nrm*S.capSign<0);
+  if(fr!==S.restFrozen){S.restFrozen=fr;$('rest').classList.toggle('frozen',fr);
+    $('r_lbl').textContent=fr?'ПАУЗА · магніт догори':'відпочинок';beep(fr?420:760,.1);}
   if(S.restFrozen)return;
   const p=S.restLeft; S.restLeft-=dt;
-  if(p>10&&S.restLeft<=10){ beep(520,.12);setTimeout(()=>beep(520,.12),180); say('Готуйся',true); $('rest').classList.add('go'); }
-  if(p>3&&S.restLeft<=3) beep(660,.08);
-  if(p>2&&S.restLeft<=2) beep(660,.08);
-  if(p>1&&S.restLeft<=1) beep(660,.08);
-  if(S.restLeft<=0) stopRest(true);
+  if(p>10&&S.restLeft<=10){beep(520,.12);setTimeout(()=>beep(520,.12),180);say('Готуйся',true);$('rest').classList.add('go');}
+  if(p>3&&S.restLeft<=3)beep(660,.08);
+  if(p>2&&S.restLeft<=2)beep(660,.08);
+  if(p>1&&S.restLeft<=1)beep(660,.08);
+  if(S.restLeft<=0)stopRest(true);
 }
 
-/* ══ КНОПКА — єдине керування ══ */
+/* ══ КНОПКА ══ */
 function button(b,t){
   const was=S.btn; S.btn=b;
   if(b&&!was){ S.btnDown=t; S.btnLong=false; }
-  else if(b&&was){ if(!S.btnLong&&t-S.btnDown>1.2){ S.btnLong=true; teachStart(); } }
+  else if(b&&was){ if(!S.btnLong&&t-S.btnDown>1.2){ S.btnLong=true; endWorkout(); } }
   else if(!b&&was){
     if(S.btnLong){ S.btnN=0; return; }
     S.btnN=(t-S.btnUp<0.45)?S.btnN+1:1; S.btnUp=t; beep(1500,.04,'square',.5);
   }
   if(S.btnN>0&&!b&&t-S.btnUp>0.45){ const n=S.btnN; S.btnN=0;
-    if(S.teach){ teachStop(); toast('Навчання скасовано'); return; }
-    if(n===1) endSet(); else undoRep(); }
+    if(S.restOn){ stopRest(false); return; }
+    if(n===1){ S.live?endSet(false):startSet(); }
+    else cancelSet();
+  }
+}
+function endWorkout(){
+  if(S.live) endSet(false);
+  if(!S.wk||!S.wk.sets.length){ toast('Тренування порожнє'); return; }
+  S.wk.end=Date.now(); DB.wk.unshift(S.wk); while(DB.wk.length>60) DB.wk.pop();
+  const n=S.wk.sets.length; S.wk=null; saveDB(); renderWk(); renderHist();
+  toast('Тренування збережено: '+n+' підходів'); say('Тренування збережено',true);
 }
 
-/* ══ ГРАФІКИ ══ */
-const N=280, buf={sig:[],thr:[],av:[],mk:[]};
+/* ══ ГРАФІК ══ */
+const NB=260, buf={sig:[],thr:[],av:[],mk:[]};
 function charts(){
-  const p=(k,v)=>{const b=buf[k];b.push(v);if(b.length>N)b.shift();};
-  p('sig',S.sig); p('thr',S.thr); p('av',S.aV);
-  p('mk', now()-S.lastRep<0.2?1:0);
+  const p=(k,v)=>{const b=buf[k];b.push(v);if(b.length>NB)b.shift();};
+  p('sig',S.det?S.det.sig:0); p('thr',S.det?S.det.thr:0); p('av',S.aV);
+  const lr=S.setReps.length?S.setReps[S.setReps.length-1].t:-99;
+  p('mk',now()-lr<0.25?1:0);
 }
-function draw(cv,ser,fixed){
+function draw(cv,ser){
   const dpr=Math.min(2,devicePixelRatio||1),w=cv.clientWidth,h=cv.clientHeight;
   if(!w||!h)return;
   if(cv.width!==w*dpr||cv.height!==h*dpr){cv.width=w*dpr;cv.height=h*dpr;}
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
-  let mx=fixed||0;
-  if(!mx){ser.forEach(s=>s.d.forEach(v=>{const a=Math.abs(v);if(a>mx)mx=a;}));mx=(mx||.1)*1.2;}
+  let mx=0; ser.forEach(s=>s.d.forEach(v=>{const a=Math.abs(v);if(a>mx)mx=a;}));
+  mx=(mx||.05)*1.25;
   c.strokeStyle='#1a2230';c.lineWidth=1;c.beginPath();c.moveTo(0,h/2);c.lineTo(w,h/2);c.stroke();
-  c.fillStyle='rgba(47,208,122,.20)';
-  buf.mk.forEach((m,i)=>{if(m){const x=i/(N-1)*w;c.fillRect(x-2,0,4,h);}});
+  c.fillStyle='rgba(47,208,122,.22)';
+  buf.mk.forEach((m,i)=>{if(m){const x=i/(NB-1)*w;c.fillRect(x-2,0,4,h);}});
   ser.forEach(s=>{
     const d=s.d;if(d.length<2)return;
-    c.strokeStyle=s.c;c.lineWidth=s.w||1.8;c.lineJoin='round';c.beginPath();
-    const off=N-d.length;
-    for(let i=0;i<d.length;i++){
-      const x=(i+off)/(N-1)*w,y=h/2-clamp(d[i]/mx,-1,1)*(h/2-3);
-      i?c.lineTo(x,y):c.moveTo(x,y);
-    }
-    c.stroke();
-    if(s.mirror){ c.beginPath();
-      for(let i=0;i<d.length;i++){
-        const x=(i+off)/(N-1)*w,y=h/2+clamp(d[i]/mx,-1,1)*(h/2-3);
-        i?c.lineTo(x,y):c.moveTo(x,y);
-      } c.stroke(); }
+    const off=NB-d.length;
+    const line=(sign)=>{c.beginPath();
+      for(let i=0;i<d.length;i++){const x=(i+off)/(NB-1)*w,y=h/2-sign*clamp(d[i]/mx,-1,1)*(h/2-3);
+        i?c.lineTo(x,y):c.moveTo(x,y);} c.stroke();};
+    c.strokeStyle=s.c;c.lineWidth=s.w||1.8;c.lineJoin='round';
+    line(1); if(s.mirror) line(-1);
   });
 }
 
 /* ══ РЕНДЕР ══ */
-function renderReps(){
-  $('c_list').innerHTML=S.reps.map(r=>{
-    const cls=r.fast?'rep bad':(r.pct<100-CFG.fat?'rep tired':'rep');
-    return '<div class="'+cls+'">'+r.n+'<small>'+r.ecc.toFixed(1)+'с</small></div>';
-  }).join('');
-  const fastN=S.reps.filter(r=>r.fast).length;
-  $('c_note').innerHTML = !S.reps.length?'' :
-    (fastN? '<div class="warnbox">'+fastN+' повтор(ів) опущено швидше за '+CFG.ecc+' с. Червоні — саме вони.</div>'
-          : '<div class="okbox">Темп у нормі: всі опускання довші за '+CFG.ecc+' с.</div>');
+function renderWk(){
+  const sets=S.wk?S.wk.sets:[];
+  const byEx={};
+  sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s);});
+  const names=Object.keys(byEx);
+  $('w_sets').textContent=sets.length;
+  $('w_reps').textContent=sets.reduce((a,s)=>a+s.reps,0);
+  $('w_ex').textContent=names.length;
+  $('w_list').innerHTML=names.length?names.map(n=>{
+    const ss=byEx[n];
+    return '<div class="ex"><div class="nm">'+esc(n)
+      +'<small>'+ss.length+' підход'+(ss.length===1?'':'ів')+'</small>'
+      +'<div class="setrow">'+ss.map(s=>'<span class="pill'+(s.man?' man':'')+'">'+s.reps+'</span>').join('')+'</div>'
+      +'</div><div class="vol">'+ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">повт</span></div></div>';
+  }).join(''):'<div class="hint">Ще немає підходів. Причепи Triki і тисни «почати підхід».</div>';
 }
 function renderHist(){
-  $('s_log').textContent = S.hist.length
-    ? 'підх  повт  с/повт  TUT  падіння\n'+S.hist.map(h=>
-        String(h.set).padStart(4)+String(h.reps).padStart(6)+h.per.toFixed(1).padStart(8)
-        +(h.tut+'с').padStart(6)+(h.drop+'%').padStart(9)).join('\n')
-    : 'Підходів ще немає.';
+  const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
+  $('h_ex').innerHTML=names.length?names.map(n=>{
+    const e=DB.ex[n];
+    const trained=(e.labels||0)>0;
+    return '<div class="ex"><div class="nm">'+esc(n)
+      +'<small>'+(e.used||0)+' підходів · '
+      +(trained?('навчено на '+e.labels+' виправлен'+(e.labels===1?'ні':'нях')):'ще не виправлялась')
+      +(e.per?(' · '+e.per.toFixed(1)+' с/повт'):'')+'</small></div>'
+      +'<div class="vol">'+(trained?'🎓':'—')+'</div></div>';
+  }).join(''):'<div class="hint">Вправ ще немає.</div>';
+  $('h_wk').innerHTML=DB.wk.length?DB.wk.map(w=>{
+    const d=new Date(w.start);
+    const byEx={}; w.sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s.reps);});
+    const mins=Math.round(((w.end||w.start)-w.start)/60000);
+    return '<div class="wk"><div class="h">'+d.toLocaleDateString('uk-UA',{day:'numeric',month:'long'})
+      +'<span class="sp"></span><span>'+w.sets.length+' підх · '
+      +w.sets.reduce((a,s)=>a+s.reps,0)+' повт · '+mins+' хв</span></div>'
+      +Object.keys(byEx).map(n=>'<div class="ex" style="padding:7px 0"><div class="nm" style="font-size:13px">'
+        +esc(n)+'</div><div class="vol">'+byEx[n].join(' · ')+'</div></div>').join('')
+      +'</div>';
+  }).join(''):'<div class="hint">Завершених тренувань ще немає. Утримай кнопку на кришці, щоб завершити.</div>';
 }
 function ui(){
   $('chHz').textContent=S.hz?S.hz.toFixed(0)+' Гц':'— Гц';
   if(S.mode===0){
-    $('c_reps').textContent=S.reps.length;
-    $('c_phase').textContent=S.teach?'НАВЧАННЯ':(S.st===1?'вгору ↑':S.st===-1?'вниз ↓':'чекаю рух');
-    $('c_learn').textContent=TPL?('вивчено '+TPL.per.toFixed(1)+' с/повт'):'не навчено';
-    $('c_learn').style.color=TPL?'#2fd07a':'#6c7d95';
-    const last=S.reps[S.reps.length-1];
-    $('c_tempo').textContent=last?last.ecc.toFixed(1)+'с':'—';
-    $('c_tempo').style.color=last&&last.fast?'#ff6b6b':'#e8edf5';
-    $('c_period').textContent=last?last.per.toFixed(1):'—';
-    $('c_power').textContent=last?last.pct:'—';
-    $('c_power').style.color=!last?'#e8edf5':(last.pct<100-CFG.fat?'#ff4d5e':'#2fd07a');
-    const lv=clamp(Math.abs(S.sig)/Math.max(S.thr*2,.02),0,1);
-    $('c_bar').style.width=lv*100+'%';
-    $('c_bar').style.background=Math.abs(S.sig)>S.thr?'#2fd07a':'#2f7cf6';
-    draw($('cvS'),[{d:buf.thr,c:'#3a4553',w:1,mirror:1},{d:buf.sig,c:'#4dabf7',w:2}]);
-  } else {
+    $('l_reps').textContent=S.live?S.setReps.length:(S.pendN||0);
+    $('l_ex').textContent=S.pendEx||'вправа не вибрана';
+    $('l_phase').textContent=S.live?'йде підхід':'натисни «почати підхід»';
+    const last=S.setReps[S.setReps.length-1];
+    $('l_tempo').textContent=last&&last.ecc?last.ecc.toFixed(1)+'с':'—';
+    $('l_tempo').style.color=last&&last.ecc&&last.ecc<CFG.ecc?'#ff6b6b':'#e8edf5';
+    $('l_per').textContent=last?last.per.toFixed(1):'—';
+    const d=S.live?Math.floor(now()-S.setT0):0;
+    $('l_dur').textContent=Math.floor(d/60)+':'+String(d%60).padStart(2,'0');
+    const sg=S.det?Math.abs(S.det.sig):0, th=S.det?S.det.thr:1;
+    $('l_bar').style.width=clamp(sg/Math.max(th*2,.02),0,1)*100+'%';
+    $('l_bar').style.background=sg>th?'#2fd07a':'#2f7cf6';
+    const fastN=S.setReps.filter(r=>r.ecc>0&&r.ecc<CFG.ecc).length;
+    $('l_note').innerHTML=(S.live&&fastN)?'<div class="warnbox">'+fastN+' повтор(ів) опущено швидше за '+CFG.ecc+' с</div>':'';
+  } else if(S.mode===2){
     $('d_hz').textContent=S.hz.toFixed(0)+' Гц';
-    $('d_sig').textContent=S.sig.toFixed(3);
-    $('d_thr').textContent=S.thr.toFixed(3);
+    $('d_sig').textContent=(S.det?S.det.sig:0).toFixed(3);
+    $('d_thr').textContent=(S.det?S.det.thr:0).toFixed(3);
     $('d_gyr').textContent=S.gyRate.toFixed(0);
-    draw($('cvR'),[{d:buf.av,c:'#868e96',w:1},{d:buf.sig,c:'#4dabf7',w:2}]);
-    $('d_dbg').textContent=
-      'кадрів '+S.pkFrames+' · нотифікацій '+S.pkTotal+'\n'
-     +'LSB/g '+S.gn.toFixed(0)+' (паспорт 2048)\n'
-     +'рух '+S.motion.toFixed(3)+' g · спокій '+S.stillT.toFixed(1)+' с\n'
-     +'кнопка '+(S.btn?'НАТИСНУТА':'відпущена')+'\n'
-     +'вправа '+(TPL?('per '+TPL.per.toFixed(2)+'с amp '+TPL.amp.toFixed(3)+'g'):'не навчено');
+    draw($('cvR'),[{d:buf.thr,c:'#3a4553',w:1,mirror:1},{d:buf.sig,c:'#4dabf7',w:2}]);
+    const p=currentParams();
+    $('d_dbg').textContent='кадрів '+S.pkFrames+' · нотифікацій '+S.pkTotal+'\n'
+      +'LSB/g '+S.gn.toFixed(0)+' (паспорт 2048)\n'
+      +'рух '+S.motion.toFixed(3)+' g · спокій '+S.stillT.toFixed(1)+' с\n'
+      +'кнопка '+(S.btn?'НАТИСНУТА':'відпущена')+' · підхід '+(S.live?'ЙДЕ':'ні')+'\n'
+      +'вправа '+(S.pendEx||'—')+'\n'
+      +'параметри sens '+p.sens+' perMin '+p.perMin+' floor '+p.floor;
   }
-  const sec=S.running?Math.max(0,Math.floor(now()-S.t0)):0;
-  $('s_clock').textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
-  $('s_sets').textContent=S.sets; $('s_reps').textContent=S.allReps;
-  $('s_tut').textContent=Math.round(S.allTut)+'с';
+  const sec=S.wk?Math.max(0,Math.floor((Date.now()-S.wk.start)/1000)):0;
+  $('w_clock').textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
   if(S.restOn){const l=Math.max(0,Math.ceil(S.restLeft));
     $('r_t').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');}
   requestAnimationFrame(ui);
 }
 function setMode(m){ S.mode=m;
   [...$('tabs').children].forEach(t=>t.classList.toggle('act',+t.dataset.m===m));
-  $('p0').classList.toggle('hide',m!==0); $('p1').classList.toggle('hide',m!==1);
+  [0,1,2].forEach(i=>$('p'+i).classList.toggle('hide',i!==m));
+  if(m===1) renderHist();
 }
 
 /* ══ WAKE LOCK ══ */
 let wl=null;
 async function wakeLock(){ if(!CFG.wake||!navigator.wakeLock)return;
-  try{ wl=await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null;}); }catch(e){} }
+  try{wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null;});}catch(e){} }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wakeLock();});
 
 /* ══ ДЕМО ══ */
 let demoT=null;
 function demo(on){
-  if(demoT){clearInterval(demoT);demoT=null; setStat(S.connected?'Triki':'не підключено',S.connected?'on':'');return;}
+  if(demoT){clearInterval(demoT);demoT=null;setStat(S.connected?'Triki':'не підключено',S.connected?'on':'');return;}
   if(!on)return;
-  const t0=now(); S.running=true; S.t0=t0; setStat('ДЕМО','warn');
+  const t0=now(); S.running=true; setStat('ДЕМО','warn');
   demoT=setInterval(()=>{
-    const s=now()-t0, f=0.4;
+    const s=now()-t0,f=0.45;
     const aV=(0.5/2)*Math.pow(2*Math.PI*f,2)*Math.cos(2*Math.PI*f*s)/G_MS2*2048;
     const nz=()=>(Math.random()-.5)*24;
     const b=new DataView(new ArrayBuffer(12));
     b.setInt16(0,(nz()/3)|0,true);b.setInt16(2,(nz()/3)|0,true);b.setInt16(4,(nz()/3)|0,true);
     b.setInt16(6,nz()|0,true);b.setInt16(8,nz()|0,true);b.setInt16(10,(2048+aV+nz())|0,true);
-    S.pkTotal++; frame(b,0,0);
+    S.pkTotal++;frame(b,0,0);
   },1000/60);
 }
 
@@ -712,25 +877,24 @@ function demo(on){
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform||''));
 async function exportCsv(){
   if(!S.log.length){toast('Немає даних');return;}
-  let s='epoch_ms,iso_time,a_vert_g,signal_g,threshold_g,rep_idx\n';
+  let s='epoch_ms,iso_time,a_vert_g,signal,threshold,rep_idx\n';
   for(const r of S.log) s+=r[0]+','+new Date(r[0]).toISOString()+','+r[1]+','+r[2]+','+r[3]+','+r[4]+'\n';
   const name='ironcap_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
   let f=null; try{f=new File([s],name,{type:'text/csv'});}catch(e){}
   if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
-    try{ await navigator.share({files:[f],title:name}); return; }catch(e){ if(e&&e.name==='AbortError')return; }
+    try{await navigator.share({files:[f],title:name});return;}catch(e){if(e&&e.name==='AbortError')return;}
   }
-  if(!IS_IOS){ try{ const u=URL.createObjectURL(new Blob([s],{type:'text/csv'}));
+  if(!IS_IOS){try{const u=URL.createObjectURL(new Blob([s],{type:'text/csv'}));
     const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(u),4000); return; }catch(e){} }
-  $('expT').value=s; $('exp').classList.add('on');
+    setTimeout(()=>URL.revokeObjectURL(u),4000);return;}catch(e){}}
+  $('expT').value=s;$('exp').classList.add('on');
 }
 
 /* ══ UI ══ */
 $('tabs').onclick=e=>{const t=e.target.closest('.tab');if(t){audioResume();setMode(+t.dataset.m);}};
 $('bConn').onclick=()=>S.connected?disconnect():connect();
-$('bSet').onclick=()=>{audioResume();endSet();};
-$('bTeach').onclick=()=>{audioResume();S.teach?teachStop():teachStart();};
-$('tc_x').onclick=()=>{teachStop();toast('Навчання скасовано');};
+$('goLive').onclick=()=>{audioResume();S.live?endSet(false):startSet();};
+$('bSet').onclick=()=>{audioResume();S.live?endSet(false):startSet();};
 $('bCfg').onclick=()=>$('cfg').classList.add('on');
 $('cfgX').onclick=()=>$('cfg').classList.remove('on');
 $('cfg').onclick=e=>{if(e.target===$('cfg'))$('cfg').classList.remove('on');};
@@ -738,31 +902,45 @@ $('expX').onclick=()=>$('exp').classList.remove('on');
 $('r_skip').onclick=()=>stopRest(false);
 $('bCsv').onclick=exportCsv;
 $('bDemo').onclick=()=>demo(!demoT);
-$('bForget').onclick=forgetTpl;
+$('bEndWk').onclick=()=>{$('cfg').classList.remove('on');endWorkout();};
 $('expCopy').onclick=async()=>{const t=$('expT');t.select();
   try{await navigator.clipboard.writeText(t.value);toast('Скопійовано');}
   catch(e){document.execCommand('copy');toast('Скопійовано');}};
-$('bReset').onclick=()=>{S.reps=[];S.base=null;S.fatigued=false;S.tut=0;S.sets=0;S.allReps=0;
-  S.allTut=0;S.log=[];S.hist=[];S.t0=now();renderReps();renderHist();toast('Сесію скинуто');};
+$('bWipe').onclick=()=>{ if(!confirm('Стерти всі вправи, історію і навчання?'))return;
+  DB={ex:{},wk:[]};S.wk=null;S.pendEx=null;saveDB();renderWk();renderHist();
+  $('cfg').classList.remove('on');toast('Дані стерто'); };
+
+$('pm_minus').onclick=()=>{S.pendN=Math.max(0,S.pendN-1);$('pm_n').textContent=S.pendN;beep(700,.05);};
+$('pm_plus').onclick=()=>{S.pendN++;$('pm_n').textContent=S.pendN;beep(950,.05);};
+$('p_exlist').onclick=e=>{const o=e.target.closest('.exopt');if(!o)return;
+  S.pendEx=o.dataset.ex;
+  [...$('p_exlist').children].forEach(c=>c.classList.toggle('sel',c===o));};
+$('p_save').onclick=()=>{
+  const nm=($('p_new').value||'').trim()||S.pendEx;
+  if(!nm){ toast('Обери або впиши вправу'); return; }
+  const corrected = S.pendN!==(S.pend?S.pend.reps.length:S.pendN);
+  commitSet(nm,S.pendN,corrected);
+};
+$('p_drop').onclick=()=>{S.pend=null;$('post').classList.remove('on');toast('Підхід викинуто');};
+$('postX').onclick=()=>{S.pend=null;$('post').classList.remove('on');};
 
 function sw(id,key,after){const e=$(id);e.classList.toggle('on',!!CFG[key]);
   e.onclick=()=>{CFG[key]=!CFG[key];e.classList.toggle('on',CFG[key]);saveCfg();after&&after();};}
 function num(id,key){const e=$(id);e.value=CFG[key];
-  e.onchange=()=>{const v=parseFloat(e.value);if(!isNaN(v)){CFG[key]=v;saveCfg();renderReps();}};}
-sw('oWake','wake',wakeLock);
-num('oRest','rest');num('oEcc','ecc');num('oFat','fat');
+  e.onchange=()=>{const v=parseFloat(e.value);if(!isNaN(v)){CFG[key]=v;saveCfg();}};}
+sw('oWake','wake',wakeLock); sw('oAsk','ask');
+num('oRest','rest');num('oEcc','ecc');num('oIdle','idle');
 $('oAudio').value=CFG.audio;
 $('oAudio').onchange=()=>{CFG.audio=$('oAudio').value;saveCfg();
   if(CFG.audio!=='voice')try{speechSynthesis.cancel()}catch(e){} audioResume();beep(880,.08);};
 $('oVol').value=CFG.vol;
 $('oVol').oninput=()=>{CFG.vol=+$('oVol').value;if(MASTER)MASTER.gain.setTargetAtTime(CFG.vol/100,AC.currentTime,.05);};
 $('oVol').onchange=()=>{saveCfg();audioResume();beep(880,.1);};
-$('oSens').value=CFG.sens;
-$('oSens').onchange=()=>{CFG.sens=+$('oSens').value;saveCfg();};
 
 document.addEventListener('touchstart',audioResume,{passive:true});
 document.addEventListener('click',audioResume);
-setMode(0); renderReps(); renderHist(); ui();
+S.det=makeDetector(DEF);
+setMode(0); renderWk(); renderHist(); ui();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
