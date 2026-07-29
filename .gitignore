@@ -1,7 +1,10 @@
-# особисті дані — сирі логи заїздів/тренувань не публікуємо
+# personal data — raw ride/workout logs and exported datasets stay private
 *.csv
+ironcap_dataset_*.json
+_ds.json
+_test*.json
 
-# оточення та службове
+# environment and scratch
 venv/
 __pycache__/
 *.pyc

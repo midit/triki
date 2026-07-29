@@ -455,7 +455,7 @@ function countOffline(rec,p){
 
 const S={
   mode:0, dev:null, chW:null, chLed:null, connected:false,
-  tLast:0, hz:0, pkTotal:0, pkFrames:0, lastFrame:0,
+  tLast:0, hzDisp:0, hzWin:[], pkTotal:0, pkFrames:0, lastFrame:0,
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
   aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
   det:null, live:false, setT0:0, setRec:[], setReps:[], lastMove:0,
@@ -570,7 +570,13 @@ function frame(dv,o,btn){
   const t=now();
   let raw=S.tLast?t-S.tLast:0.016; S.tLast=t; S.lastFrame=t;
   const gap=raw>GAP_RESET, dt=clamp(raw,DT_MIN,DT_MAX);
-  S.hz+=.02*(1/dt-S.hz); S.pkFrames++;
+  S.pkFrames++;
+  // True sample rate = frames per wall-clock second. NOT an EMA of 1/dt:
+  // frames arrive in bursts (several in one tick with ~0 gap between
+  // them), which spiked 1/dt and made the display read ~135 Hz for a real
+  // ~55 Hz stream. Count frames over a sliding one-second window instead.
+  S.hzWin.push(t); while(S.hzWin.length && t-S.hzWin[0]>1) S.hzWin.shift();
+  S.hzDisp=S.hzWin.length;
   const g=[dv.getInt16(o,true),dv.getInt16(o+2,true),dv.getInt16(o+4,true)];
   const a=[dv.getInt16(o+6,true),dv.getInt16(o+8,true),dv.getInt16(o+10,true)];
   button(btn,t);
@@ -707,12 +713,17 @@ function commitSet(exName,n,corrected){
   DB.cur.sets.push({ex:exName,reps:n,dur:Math.round(p.dur),ts:p.ts,man:corrected,
     ecc:eccs.length?+(eccs.reduce((a,b)=>a+b,0)/eccs.length).toFixed(1):0});
 
-  // research log — every set, labelled, with its raw trace
-  const trace=downsample(p.rec);
+  // Research log — every set, labelled, with its FULL-RESOLUTION trace.
+  // Earlier this halved the sample rate to save space; on real data that
+  // corrupted short, fast movements (a live count of 13 calf raises
+  // replayed as 7 from the halved trace), so the counter was learning
+  // from a signal it never actually saw. Full-res is what makes learning
+  // and live counting agree.
+  const trace=p.rec;
   DB.res.push({ts:p.ts,ex:exName,auto:S.pendAuto,truth:n,corrected:corrected,
-    conf:+p.conf.toFixed(2),dur:Math.round(p.dur),hz:Math.round(S.hz),
+    conf:+p.conf.toFixed(2),dur:Math.round(p.dur),hz:Math.round(S.hzDisp),
     params:Object.assign({},ex.params),raw:trace});
-  while(DB.res.length>120) DB.res.shift();
+  while(DB.res.length>80) DB.res.shift();
 
   let msg='';
   if(corrected){
@@ -729,15 +740,15 @@ function commitSet(exName,n,corrected){
   if(msg) setTimeout(()=>toast(msg),2400);
   startRest();
 }
-/* halve the sample rate to keep stored traces small */
-function downsample(rec){
-  const out=[]; let acc=0;
-  for(let i=0;i<rec.length;i++){ acc+=rec[i][0];
-    if(i%2===1){ out.push([acc,rec[i][1]]); acc=0; } }
-  return out;
-}
-
-/* ══ LEARNING FROM CORRECTIONS ══ */
+/* ══ LEARNING FROM CORRECTIONS ══
+   Grid-search parameters that reproduce the confirmed counts across all
+   labelled sets of the exercise. Two guards keep a single noisy
+   correction from wrecking an otherwise-fine exercise:
+     • need >= 2 labelled sets before learned params replace the defaults
+       (one example over-fits — a held-out test on the real leg-day data
+       showed 1-example learning generalising no better than the defaults);
+     • only adopt the fitted params if they are at least as good as the
+       defaults on the very sets we have. Otherwise keep the defaults. */
 function retune(exName){
   const ex=DB.ex[exName], sm=ex.samples||[];
   if(!sm.length) return '';
@@ -757,11 +768,19 @@ function retune(exName){
     }
   }
   if(!best) return '';
-  ex.params=best.p;
+  const defErr=sm.reduce((a,s)=>a+Math.abs(countOffline(s.rec,DEF).length-s.truth),0);
   const tot=sm.reduce((a,s)=>a+s.truth,0);
+  if(sm.length<2){
+    return 'Noted "'+exName+'" — one more correction and I\'ll tune it (still on defaults).';
+  }
+  if(best.err>defErr){                     // fitted params are worse — keep defaults
+    ex.params=Object.assign({},DEF);
+    return '"'+exName+'" stays on defaults — this set\'s signal is too noisy to fit.';
+  }
+  ex.params=best.p;
   return best.err===0
-    ? 'Learned "'+exName+'": now exact on all '+sm.length+' labelled set(s)'
-    : 'Learned "'+exName+'": off by '+best.err+' of '+tot+' reps';
+    ? 'Tuned "'+exName+'": exact on all '+sm.length+' labelled sets'
+    : 'Tuned "'+exName+'": off by '+best.err+' of '+tot+' reps across '+sm.length+' sets';
 }
 
 /* ══ REST TIMER ══ */
@@ -877,7 +896,7 @@ function renderHist(){
   }).join(''):'<div class="hint">No finished workouts yet. Hold the cap button to finish one.</div>';
 }
 function ui(){
-  $('chHz').textContent=S.hz?S.hz.toFixed(0)+' Hz':'— Hz';
+  $('chHz').textContent=S.hzDisp?S.hzDisp.toFixed(0)+' Hz':'— Hz';
   if(S.mode===0){
     $('l_reps').textContent=S.live?S.setReps.length:0;
     $('l_ex').textContent=S.pendEx||'no exercise yet';
@@ -894,7 +913,7 @@ function ui(){
     const fastN=S.setReps.filter(r=>r.ecc>0&&r.ecc<CFG.ecc).length;
     $('l_note').innerHTML=(S.live&&fastN)?'<div class="warnbox">'+fastN+' rep(s) lowered faster than '+CFG.ecc+'s</div>':'';
   } else if(S.mode===2){
-    $('d_hz').textContent=S.hz.toFixed(0)+' Hz';
+    $('d_hz').textContent=S.hzDisp.toFixed(0)+' Hz';
     $('d_sig').textContent=(S.det?S.det.sig:0).toFixed(3);
     $('d_thr').textContent=(S.det?S.det.thr:0).toFixed(3);
     $('d_gyr').textContent=S.gyRate.toFixed(0);
