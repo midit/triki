@@ -267,7 +267,8 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Always confirm rep count<small>keep ON while collecting training data — every confirmation teaches the counter</small></label><div class="sw on" id="oAsk"></div></div>
   <div class="row"><label>Min eccentric time, s</label><input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
   <div class="row"><label>Auto-stop set after, s<small>stillness longer than this ends the set</small></label>
-    <input type="number" id="oIdle" value="15" min="4" max="90" step="1"></div>
+    <input type="number" id="oIdle" value="20" min="4" max="90" step="1"></div>
+  <div class="row"><label>Battery saver<small>halves the sensor rate to 52 Hz — longer battery, but may miss fast reps. Reconnect to apply</small></label><div class="sw" id="oLow"></div></div>
   <div class="row"><span class="btn" id="bEndWk" style="flex:1">Finish workout</span></div>
   <div class="row"><span class="btn dan" id="bWipe" style="flex:1">Erase all data</span></div>
   <div class="hint" style="margin-top:12px">
@@ -348,7 +349,8 @@ const C_W='6e400002-b5a3-f393-e0a9-e50e24dcca9e';   // write / RX
 const C_N='6e400003-b5a3-f393-e0a9-e50e24dcca9e';   // notify / TX
 const C_LED='6e400004-b5a3-f393-e0a9-e50e24dcca9e'; // LED, bit 0
 const INIT1=Uint8Array.of(0x01,0x00);
-const INIT2=Uint8Array.of(0x20,0x10,0x00,0xD0,0x07,0x68,0x00,0x03); // byte 5 = ODR, 0x68 = 104 Hz
+// byte 5 = output data rate: 0x68 = 104 Hz (accurate), 0x34 = 52 Hz (saves battery)
+const initStream=odr=>Uint8Array.of(0x20,0x10,0x00,0xD0,0x07,odr,0x00,0x03);
 const ACC_LSB=2048.0;   // LSB per g   (+-16 g range)
 const GYR_LSB=131.0;    // LSB per deg/s
 const G_MS2=9.80665;
@@ -365,7 +367,7 @@ const now=()=>performance.now()/1000;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:15};
+const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false};
 try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg4')||'{}'));}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));}catch(e){}};
 
@@ -460,7 +462,7 @@ const S={
   aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
   det:null, live:false, setT0:0, setRec:[], setReps:[], lastMove:0,
   log:[], running:false,
-  btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false,
+  btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false, btnJolt:0,
   restOn:false, restLeft:0, restFrozen:false,
   pend:null, pendN:0, pendAuto:0, pendEx:null
 };
@@ -523,7 +525,7 @@ async function attach(dev){
   S.chW=await nus.getCharacteristic(C_W);
   const wr=v=>S.chW.writeValueWithoutResponse?S.chW.writeValueWithoutResponse(v):S.chW.writeValue(v);
   await wr(INIT1); await new Promise(r=>setTimeout(r,120));
-  try{ await wr(INIT2); }catch(e){}
+  try{ await wr(initStream(CFG.lowRate?0x34:0x68)); }catch(e){}
   S.connected=true; S.running=true;
   setStat(dev.name||'Triki','on');
   $('bConn').innerHTML='Disconnect<span class="s">'+esc((dev.name||'Triki').slice(0,12))+'</span>';
@@ -611,8 +613,11 @@ function physics(a,g,dt,t,gap,raw){
   if(S.live){
     S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4)]);
     const r=S.det.push(S.aV,dt,t,gap);
-    if(r) onRep(r,t);
-    if(!still) S.lastMove=t;
+    if(r) onRep(r,t);                        // onRep also refreshes lastMove
+    // Any real activity keeps the set alive. Use a low motion bar, not the
+    // strict "still" gate — small-ROM reps (calf raises, crunches) don't
+    // clear the still threshold, and that was auto-ending sets mid-rep.
+    if(S.motionEma>0.012 || !still) S.lastMove=t;
     if(t-S.lastMove>CFG.idle) endSet(true);
   } else if(S.det){ S.det.push(S.aV,dt,t,gap); }   // keep filters warm
 
@@ -629,7 +634,7 @@ function startSet(){
   if(!S.connected && !demoT){ toast('Connect Triki first'); beep(300,.12); return; }
   S.live=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
   S.det=makeDetector(currentParams());
-  sfxStart(); say('Go',true); led(true);
+  sfxStart(); say('Go',true);
   $('goLive').innerHTML='FINISH SET<span>1 click · 2 clicks to cancel</span>';
   $('goLive').classList.add('stop');
   $('bSet').innerHTML='Finish set<span class="s">1 click on cap</span>';
@@ -641,12 +646,13 @@ function currentParams(){
 }
 function onRep(r,t){
   S.setReps.push({t:t,per:r.per,ecc:r.ecc});
+  S.lastMove=t;                              // a counted rep is unambiguous activity
   sfxRep();
   if(r.ecc>0 && r.ecc<CFG.ecc) setTimeout(()=>{sfxSlow();say('Slower');},120);
 }
 function cancelSet(){
   if(!S.live) return;
-  S.live=false; led(false); sfxStop(); toast('Set cancelled'); resetLiveUI();
+  S.live=false; sfxStop(); toast('Set cancelled'); resetLiveUI();
 }
 function resetLiveUI(){
   $('goLive').innerHTML='START SET<span>or click the button on the cap</span>';
@@ -656,7 +662,7 @@ function resetLiveUI(){
 }
 function endSet(auto){
   if(!S.live) return;
-  S.live=false; led(false); resetLiveUI();
+  S.live=false; resetLiveUI();
   const dur=now()-S.setT0, n=S.setReps.length;
   if(n<1){ toast(auto?'Empty set — discarded':'No reps detected'); beep(300,.12); return; }
   sfxStop();
@@ -804,13 +810,26 @@ function restLogic(dt,t){
   if(S.restLeft<=0)stopRest(true);
 }
 
-/* ══ CAP BUTTON — the only physical control ══ */
+/* ══ CAP BUTTON — the only physical control ══
+   Debounced. Racking a plate or knocking the magnet against the machine
+   made the button read pressed for a frame or two, which was starting and
+   ending sets on its own. A press now only counts if it was held for a
+   real moment (MIN..MAX) and did not coincide with an impact — a spurious
+   1-2 frame blip, or a spike that lands together with a big jolt, is
+   ignored. Deliberate presses (~100 ms+) pass easily.                  */
+const BTN_MIN=0.045, BTN_MAX=1.2;
 function button(b,t){
   const was=S.btn; S.btn=b;
-  if(b&&!was){ S.btnDown=t; S.btnLong=false; }
-  else if(b&&was){ if(!S.btnLong&&t-S.btnDown>1.2){ S.btnLong=true; endWorkout(); } }
+  if(b&&!was){ S.btnDown=t; S.btnLong=false; S.btnJolt=S.motionEma; }
+  else if(b&&was){
+    S.btnJolt=Math.max(S.btnJolt,S.motionEma);   // remember worst jolt during hold
+    if(!S.btnLong&&t-S.btnDown>1.2){ S.btnLong=true; endWorkout(); }
+  }
   else if(!b&&was){
     if(S.btnLong){ S.btnN=0; return; }
+    const held=t-S.btnDown;
+    // too short = electrical/impact blip; too jolty = knocked, not pressed
+    if(held<BTN_MIN || S.btnJolt>0.6){ return; }
     S.btnN=(t-S.btnUp<0.45)?S.btnN+1:1; S.btnUp=t; beep(1500,.04,'square',.5);
   }
   if(S.btnN>0&&!b&&t-S.btnUp>0.45){ const n=S.btnN; S.btnN=0;
@@ -1029,6 +1048,11 @@ function sw(id,key,after){const e=$(id);e.classList.toggle('on',!!CFG[key]);
 function num(id,key){const e=$(id);e.value=CFG[key];
   e.onchange=()=>{const v=parseFloat(e.value);if(!isNaN(v)){CFG[key]=v;saveCfg();}};}
 sw('oWake','wake',wakeLock); sw('oAsk','ask');
+sw('oLow','lowRate',()=>{ if(S.connected&&S.chW){
+  const wr=v=>S.chW.writeValueWithoutResponse?S.chW.writeValueWithoutResponse(v):S.chW.writeValue(v);
+  try{ wr(initStream(CFG.lowRate?0x34:0x68)); toast(CFG.lowRate?'52 Hz — battery saver on':'104 Hz — full accuracy'); }
+  catch(e){ toast('Reconnect to apply'); }
+} });
 num('oRest','rest');num('oEcc','ecc');num('oIdle','idle');
 $('oAudio').value=CFG.audio;
 $('oAudio').onchange=()=>{CFG.audio=$('oAudio').value;saveCfg();
