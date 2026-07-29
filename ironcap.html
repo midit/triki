@@ -52,6 +52,8 @@ canvas.chart{width:100%;height:110px;display:block;background:#0b1017;border-rad
 .golive{background:linear-gradient(160deg,#2fd07a,#12a35a);color:#04210f;border-radius:16px;
   padding:22px;text-align:center;font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:-.01em}
 .golive.stop{background:linear-gradient(160deg,#e8434f,#b81f2b);color:#fff}
+.golive.off{background:#141b26;color:#7b8ba3;border:1px solid #24303f}
+.big{transition:transform .09s ease-out}
 .golive small{display:block;font-size:12px;font-weight:600;opacity:.72;margin-top:4px;letter-spacing:0}
 
 .ex{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #17202c}
@@ -104,6 +106,10 @@ select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9
 .counter .pm{width:60px;height:60px;border-radius:50%;background:#182130;border:1px solid #253243;
   display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700}
 .counter .pm:active{background:#223044}
+.pm.sm{width:46px;height:46px;font-size:24px}
+.wgt{display:flex;align-items:center;gap:10px;margin:14px 0 2px}
+.wgt input{width:96px;font-size:22px;font-weight:700;text-align:center}
+.wgt-u{font-size:15px;color:#8fa0b8;font-weight:700;margin-left:-4px}
 .conf{border-radius:11px;padding:10px 12px;font-size:12.5px;margin:8px 0;line-height:1.45}
 .conf.hi{background:#08190f;border:1px solid #1c5a35;color:#6ee7a0}
 .conf.lo{background:#1a1508;border:1px solid #5a4a1a;color:#ffd98a}
@@ -115,10 +121,17 @@ select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9
 
 .rest{position:fixed;inset:0;background:#070a0f;z-index:55;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px}
 .rest.on{display:flex}
-.rest .t{font-size:112px;font-weight:800;letter-spacing:-.04em;line-height:1}
-.rest .lbl{font-size:13px;color:#7b8ba3;text-transform:uppercase;letter-spacing:.14em;font-weight:700}
-.rest.frozen .t{color:#4dabf7}
+.rest .lbl{font-size:13px;color:#7b8ba3;text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:22px}
+.ring{position:relative;width:260px;height:260px;display:flex;align-items:center;justify-content:center}
+.ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.ring .rbg{fill:none;stroke:#161c26;stroke-width:10}
+.ring .rfg{fill:none;stroke:#2fd07a;stroke-width:10;stroke-linecap:round;
+  stroke-dasharray:628;stroke-dashoffset:0;transition:stroke-dashoffset .3s linear,stroke .3s}
+.rest .t{font-size:78px;font-weight:800;letter-spacing:-.04em;line-height:1;position:relative}
+.rest.frozen .t{color:#4dabf7} .rest.frozen .rfg{stroke:#4dabf7}
 .rest.go .t{color:#2fd07a}
+.rest-ctl{display:flex;gap:10px;margin-top:26px}
+.rest-ctl .rc{min-width:82px;padding:14px 18px;font-size:15px;border-color:#2a3546;background:#141b26}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:104px;background:#1c2735;
   border:1px solid #2c3a4e;color:#e8edf5;padding:10px 16px;border-radius:12px;font-size:13px;
@@ -233,9 +246,17 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
 
 <div class="rest" id="rest">
   <div class="lbl" id="r_lbl">rest</div>
-  <div class="t mono" id="r_t">1:30</div>
-  <div class="btn gh" id="r_skip" style="margin-top:10px;padding:11px 26px">Skip</div>
-  <div class="hint" style="margin-top:12px;text-align:center">Magnet side up — timer pauses</div>
+  <div class="ring">
+    <svg viewBox="0 0 220 220"><circle class="rbg" cx="110" cy="110" r="100"/>
+      <circle class="rfg" id="r_ring" cx="110" cy="110" r="100"/></svg>
+    <div class="t mono" id="r_t">1:30</div>
+  </div>
+  <div class="rest-ctl">
+    <div class="btn gh rc" id="r_minus">−15</div>
+    <div class="btn gh rc" id="r_skip">Skip</div>
+    <div class="btn gh rc" id="r_plus">+15</div>
+  </div>
+  <div class="hint" id="r_next" style="margin-top:16px;text-align:center">Magnet side up to pause</div>
 </div>
 
 <!-- ====== AFTER A SET ====== -->
@@ -248,7 +269,14 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   </div>
   <div class="sub">reps</div>
   <div id="p_conf"></div>
-  <div class="hint" style="margin-top:10px">Which exercise was this?</div>
+  <div class="wgt">
+    <div class="pm sm" id="wg_minus">−</div>
+    <input type="number" id="wg_v" inputmode="decimal" placeholder="—" step="0.5" min="0">
+    <span class="wgt-u">kg</span>
+    <div class="pm sm" id="wg_plus">+</div>
+    <span class="hint" style="flex:1;text-align:right">weight · optional</span>
+  </div>
+  <div class="hint" style="margin-top:12px">Which exercise was this?</div>
   <div class="exlist" id="p_exlist"></div>
   <div class="row" style="border:0"><input type="text" id="p_new" placeholder="or type a new name"></div>
   <div class="row" style="border:0">
@@ -460,10 +488,10 @@ const S={
   tLast:0, hzDisp:0, hzWin:[], pkTotal:0, pkFrames:0, lastFrame:0,
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
   aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
-  det:null, live:false, setT0:0, setRec:[], setReps:[], lastMove:0,
+  det:null, live:false, arming:false, setT0:0, setRec:[], setReps:[], lastMove:0,
   log:[], running:false,
   btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false, btnJolt:0,
-  restOn:false, restLeft:0, restFrozen:false,
+  restOn:false, restLeft:0, restFull:90, restFrozen:false, bumpT:-9, goState:'',
   pend:null, pendN:0, pendAuto:0, pendEx:null
 };
 
@@ -491,6 +519,7 @@ const sfxSlow =()=>{beep(320,.13,'square',.8);setTimeout(()=>beep(320,.13,'squar
 const sfxStart=()=>{beep(520,.09);setTimeout(()=>beep(780,.12),100);};
 const sfxStop =()=>{beep(780,.09);setTimeout(()=>beep(520,.14),100);};
 const sfxGo   =()=>{beep(880,.13);setTimeout(()=>beep(1320,.2),150);};
+const sfxReady=()=>{beep(1046,.10);setTimeout(()=>beep(1568,.14),110);};
 let lastSay=0;
 function say(txt,force){
   if(CFG.audio!=='voice')return;
@@ -612,13 +641,18 @@ function physics(a,g,dt,t,gap,raw){
 
   if(S.live){
     S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4)]);
-    const r=S.det.push(S.aV,dt,t,gap);
-    if(r) onRep(r,t);                        // onRep also refreshes lastMove
-    // Any real activity keeps the set alive. Use a low motion bar, not the
-    // strict "still" gate — small-ROM reps (calf raises, crunches) don't
-    // clear the still threshold, and that was auto-ending sets mid-rep.
-    if(S.motionEma>0.012 || !still) S.lastMove=t;
-    if(t-S.lastMove>CFG.idle) endSet(true);
+    const r=S.det.push(S.aV,dt,t,gap);       // always run: keeps filters warm
+    if(S.arming){
+      // wait for the puck to be mounted and released, then begin
+      if(S.stillT>0.7 || t-S.setT0>5) armed();
+    } else {
+      if(r) onRep(r,t);                      // onRep also refreshes lastMove
+      // Any real activity keeps the set alive. Use a low motion bar, not the
+      // strict "still" gate — small-ROM reps (calf raises, crunches) don't
+      // clear the still threshold, and that was auto-ending sets mid-rep.
+      if(S.motionEma>0.012 || !still) S.lastMove=t;
+      if(t-S.lastMove>CFG.idle) endSet(true);
+    }
   } else if(S.det){ S.det.push(S.aV,dt,t,gap); }   // keep filters warm
 
   restLogic(dt,t);
@@ -632,13 +666,22 @@ function physics(a,g,dt,t,gap,raw){
 function startSet(){
   if(S.live) return;
   if(!S.connected && !demoT){ toast('Connect Triki first'); beep(300,.12); return; }
-  S.live=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
+  // Arming phase. On free weights the flow is: mount the puck, press start,
+  // then let go and get into position — all of which is motion that used to
+  // be counted as fake reps. So counting is suppressed until the puck has
+  // settled (still ~0.7 s = racked/positioned, hand off), or 5 s as a
+  // fallback. When it settles we reset the detector and the trace so the
+  // real reps start from a clean zero.
+  S.live=true; S.arming=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
   S.det=makeDetector(currentParams());
-  sfxStart(); say('Go',true);
-  $('goLive').innerHTML='FINISH SET<span>1 click · 2 clicks to cancel</span>';
-  $('goLive').classList.add('stop');
+  sfxStart(); say('Get set',true);
   $('bSet').innerHTML='Finish set<span class="s">1 click on cap</span>';
   $('l_reps').classList.remove('idle');
+}
+function armed(){                              // arming complete -> start counting
+  S.arming=false; S.det.reset(); S.setRec=[]; S.setReps=[];
+  S.setT0=now(); S.lastMove=now();
+  sfxReady(); say('Go',true);
 }
 function currentParams(){
   const ex=S.pendEx&&DB.ex[S.pendEx];
@@ -647,6 +690,7 @@ function currentParams(){
 function onRep(r,t){
   S.setReps.push({t:t,per:r.per,ecc:r.ecc});
   S.lastMove=t;                              // a counted rep is unambiguous activity
+  S.bumpT=now();                             // pulse the big number
   sfxRep();
   if(r.ecc>0 && r.ecc<CFG.ecc) setTimeout(()=>{sfxSlow();say('Slower');},120);
 }
@@ -655,8 +699,6 @@ function cancelSet(){
   S.live=false; sfxStop(); toast('Set cancelled'); resetLiveUI();
 }
 function resetLiveUI(){
-  $('goLive').innerHTML='START SET<span>or click the button on the cap</span>';
-  $('goLive').classList.remove('stop');
   $('bSet').innerHTML='Start set<span class="s">1 click on cap</span>';
   $('l_reps').classList.add('idle');
 }
@@ -704,7 +746,12 @@ function openPost(){
         +(e.per?(' · '+e.per.toFixed(1)+'s/rep'):'')+'</small></div>';}).join('')
     + rest.map(n=>'<div class="exopt" data-ex="'+esc(n)+'" style="opacity:.62">'+esc(n)+'<small>new</small></div>').join('');
   $('p_new').value='';
+  prefillWeight();
   $('post').classList.add('on');
+}
+function prefillWeight(){                       // last weight used for this exercise
+  const ex=S.pendEx&&DB.ex[S.pendEx];
+  $('wg_v').value=(ex&&ex.lastW)?ex.lastW:'';
 }
 
 function commitSet(exName,n,corrected){
@@ -716,7 +763,10 @@ function commitSet(exName,n,corrected){
   if(iv.length){ const m=iv.reduce((a,b)=>a+b,0)/iv.length; ex.per=ex.per?ex.per*0.7+m*0.3:m; }
   if(!DB.cur) DB.cur={start:Date.now(),sets:[]};
   const eccs=p.reps.map(r=>r.ecc).filter(x=>x>0);
-  DB.cur.sets.push({ex:exName,reps:n,dur:Math.round(p.dur),ts:p.ts,man:corrected,
+  const w=parseFloat($('wg_v').value);
+  const weight=(!isNaN(w)&&w>0)?w:0;
+  if(weight) ex.lastW=weight;                   // remember for next set's prefill
+  DB.cur.sets.push({ex:exName,reps:n,w:weight,dur:Math.round(p.dur),ts:p.ts,man:corrected,
     ecc:eccs.length?+(eccs.reduce((a,b)=>a+b,0)/eccs.length).toFixed(1):0});
 
   // Research log — every set, labelled, with its FULL-RESOLUTION trace.
@@ -790,10 +840,14 @@ function retune(exName){
 }
 
 /* ══ REST TIMER ══ */
-function startRest(){ S.restOn=true;S.restLeft=CFG.rest;S.restFrozen=false;
-  $('rest').classList.add('on');$('rest').classList.remove('frozen','go');$('r_lbl').textContent='rest'; }
+function startRest(){ S.restOn=true;S.restLeft=CFG.rest;S.restFull=CFG.rest;S.restFrozen=false;
+  $('rest').classList.add('on');$('rest').classList.remove('frozen','go');$('r_lbl').textContent='rest';
+  $('r_next').textContent=S.pendEx?('Next up: '+S.pendEx):'Magnet side up to pause'; }
 function stopRest(done){ S.restOn=false;$('rest').classList.remove('on','frozen','go');
   if(done){sfxGo();say('Go',true);} }
+function restBump(sec){ if(!S.restOn)return;
+  S.restLeft=clamp(S.restLeft+sec,0,3600); S.restFull=Math.max(S.restFull,S.restLeft);
+  $('rest').classList.remove('go'); beep(sec>0?900:600,.06); }
 function restLogic(dt,t){
   if(!S.restOn)return;
   const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
@@ -885,10 +939,13 @@ function renderWk(){
   $('w_ex').textContent=names.length;
   $('w_list').innerHTML=names.length?names.map(n=>{
     const ss=byEx[n];
+    const vol=ss.reduce((a,s)=>a+(s.w||0)*s.reps,0);
+    const pill=s=>'<span class="pill'+(s.man?' man':'')+'">'+(s.w?s.w+'×'+s.reps:s.reps)+'</span>';
     return '<div class="ex"><div class="nm">'+esc(n)
       +'<small>'+ss.length+' set'+(ss.length===1?'':'s')+'</small>'
-      +'<div class="setrow">'+ss.map(s=>'<span class="pill'+(s.man?' man':'')+'">'+s.reps+'</span>').join('')+'</div>'
-      +'</div><div class="vol">'+ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">reps</span></div></div>';
+      +'<div class="setrow">'+ss.map(pill).join('')+'</div>'
+      +'</div><div class="vol">'+(vol?fmtKg(vol)+'<br><span class="hint">kg</span>'
+        :ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">reps</span>')+'</div></div>';
   }).join(''):'<div class="hint">No sets yet. Attach Triki and press “start set”.</div>';
   $('r_count').textContent=DB.res.length+' sets logged';
 }
@@ -904,22 +961,41 @@ function renderHist(){
   }).join(''):'<div class="hint">No exercises yet.</div>';
   $('h_wk').innerHTML=DB.wk.length?DB.wk.map(w=>{
     const d=new Date(w.start);
-    const byEx={}; w.sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s.reps);});
+    const byEx={}; w.sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s);});
     const mins=Math.round(((w.end||w.start)-w.start)/60000);
+    const vol=w.sets.reduce((a,s)=>a+(s.w||0)*s.reps,0);
+    const meta=w.sets.length+' sets · '+w.sets.reduce((a,s)=>a+s.reps,0)+' reps · '
+      +(vol?fmtKg(vol)+' kg · ':'')+mins+' min';
     return '<div class="wk"><div class="h">'+d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})
-      +'<span class="sp"></span><span>'+w.sets.length+' sets · '
-      +w.sets.reduce((a,s)=>a+s.reps,0)+' reps · '+mins+' min</span></div>'
-      +Object.keys(byEx).map(n=>'<div class="ex" style="padding:7px 0"><div class="nm" style="font-size:13px">'
-        +esc(n)+'</div><div class="vol">'+byEx[n].join(' · ')+'</div></div>').join('')
+      +'<span class="sp"></span><span>'+meta+'</span></div>'
+      +Object.keys(byEx).map(n=>{
+        const ss=byEx[n], v=ss.reduce((a,s)=>a+(s.w||0)*s.reps,0);
+        const cell=v?fmtKg(v)+' kg':ss.map(s=>s.reps).join(' · ');
+        return '<div class="ex" style="padding:7px 0"><div class="nm" style="font-size:13px">'
+          +esc(n)+'</div><div class="vol">'+cell+'</div></div>';}).join('')
       +'</div>';
   }).join(''):'<div class="hint">No finished workouts yet. Hold the cap button to finish one.</div>';
 }
+function fmtKg(v){ return Math.round(v).toLocaleString('en-US'); }   // 1485 -> "1,485"
 function ui(){
   $('chHz').textContent=S.hzDisp?S.hzDisp.toFixed(0)+' Hz':'— Hz';
   if(S.mode===0){
     $('l_reps').textContent=S.live?S.setReps.length:0;
     $('l_ex').textContent=S.pendEx||'no exercise yet';
-    $('l_phase').textContent=S.live?'set running':'press “start set”';
+    $('l_phase').textContent=S.arming?'get set — hold still':(S.live?'set running':'press “start set”');
+    $('l_reps').classList.toggle('idle',!S.live||S.arming);
+    const bump=Math.max(0,1-(now()-S.bumpT)/0.20);
+    $('l_reps').style.transform='scale('+(1+0.11*bump).toFixed(3)+')';
+    // banner state, set only on change (avoid rewriting innerHTML each frame)
+    const canGo=S.connected||!!demoT;
+    let g = S.arming ? 'a' : S.live ? 'l' : canGo ? 'r' : 'x';
+    if(g!==S.goState){ S.goState=g; const el=$('goLive');
+      el.classList.toggle('off', g==='x'); el.classList.toggle('stop', g==='a'||g==='l');
+      el.innerHTML =
+        g==='x' ? 'CONNECT TRIKI<span>tap Connect below, or try the demo</span>' :
+        g==='r' ? 'START SET<span>or click the button on the cap</span>' :
+        g==='a' ? 'GET SET…<span>hold still — starts when the weight settles</span>' :
+                  'FINISH SET<span>1 click · 2 clicks to cancel</span>'; }
     const last=S.setReps[S.setReps.length-1];
     $('l_tempo').textContent=last&&last.ecc?last.ecc.toFixed(1)+'s':'—';
     $('l_tempo').style.color=last&&last.ecc&&last.ecc<CFG.ecc?'#ff6b6b':'#e8edf5';
@@ -949,7 +1025,9 @@ function ui(){
   const sec=DB.cur?Math.max(0,Math.floor((Date.now()-DB.cur.start)/1000)):0;
   $('w_clock').textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
   if(S.restOn){const l=Math.max(0,Math.ceil(S.restLeft));
-    $('r_t').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');}
+    $('r_t').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');
+    const frac=S.restFull>0?clamp(S.restLeft/S.restFull,0,1):0;
+    $('r_ring').style.strokeDashoffset=(628*(1-frac)).toFixed(0);}
   requestAnimationFrame(ui);
 }
 function setMode(m){ S.mode=m;
@@ -1019,6 +1097,8 @@ $('cfgX').onclick=()=>$('cfg').classList.remove('on');
 $('cfg').onclick=e=>{if(e.target===$('cfg'))$('cfg').classList.remove('on');};
 $('expX').onclick=()=>$('exp').classList.remove('on');
 $('r_skip').onclick=()=>stopRest(false);
+$('r_minus').onclick=()=>restBump(-15);
+$('r_plus').onclick=()=>restBump(15);
 $('bCsv').onclick=exportCsv;
 $('bResearch').onclick=exportResearch;
 $('bDemo').onclick=()=>demo(!demoT);
@@ -1034,7 +1114,12 @@ $('pm_minus').onclick=()=>{S.pendN=Math.max(0,S.pendN-1);$('pm_n').textContent=S
 $('pm_plus').onclick=()=>{S.pendN++;$('pm_n').textContent=S.pendN;beep(950,.05);};
 $('p_exlist').onclick=e=>{const o=e.target.closest('.exopt');if(!o)return;
   S.pendEx=o.dataset.ex;
-  [...$('p_exlist').children].forEach(c=>c.classList.toggle('sel',c===o));};
+  [...$('p_exlist').children].forEach(c=>c.classList.toggle('sel',c===o));
+  prefillWeight();};                            // show that exercise's last weight
+const wgStep=d=>{const v=Math.max(0,(parseFloat($('wg_v').value)||0)+d);
+  $('wg_v').value=v?(+v.toFixed(2)):''; beep(d>0?950:700,.05);};
+$('wg_minus').onclick=()=>wgStep(-2.5);
+$('wg_plus').onclick=()=>wgStep(2.5);
 $('p_save').onclick=()=>{
   const nm=($('p_new').value||'').trim()||S.pendEx;
   if(!nm){ toast('Pick or type an exercise name'); return; }
