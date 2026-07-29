@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IronCap">
+<link rel="manifest" href="manifest.webmanifest">
+<title>IronCap — Triki Gym</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:#0a0d12;color:#e8edf5;
+  font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Segoe UI,Roboto,sans-serif;
+  overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.wrap{max-width:640px;margin:0 auto;padding:8px 12px 96px}
+h1,h2,h3{margin:0}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---- top bar ---- */
+.top{display:flex;align-items:center;gap:8px;padding:8px 2px;font-size:12px;color:#8fa0b8}
+.dot{width:9px;height:9px;border-radius:50%;background:#3a4553;flex:0 0 auto;transition:.2s}
+.dot.on{background:#2fd07a;box-shadow:0 0 10px #2fd07a}
+.dot.warn{background:#ffb020;box-shadow:0 0 10px #ffb020}
+.dot.err{background:#ff4d5e}
+.top .sp{flex:1}
+.chip{background:#161c26;border:1px solid #222b38;border-radius:999px;padding:3px 9px;font-size:11px;white-space:nowrap}
+.chip b{color:#e8edf5;font-weight:600}
+
+/* ---- mode tabs ---- */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 12px}
+.tab{background:#12171f;border:1px solid #1e2734;border-radius:12px;padding:9px 4px;text-align:center;
+  font-size:11px;font-weight:600;color:#7b8ba3;letter-spacing:.02em;transition:.15s}
+.tab .ic{display:block;font-size:17px;margin-bottom:2px;filter:grayscale(1);opacity:.6}
+.tab.act{color:#0a0d12;border-color:transparent}
+.tab.act .ic{filter:none;opacity:1}
+.tab.act[data-m="1"]{background:linear-gradient(160deg,#ff6b6b,#e03131)}
+.tab.act[data-m="2"]{background:linear-gradient(160deg,#ffd43b,#f59f00)}
+.tab.act[data-m="3"]{background:linear-gradient(160deg,#4dabf7,#1c7ed6)}
+.tab.act[data-m="0"]{background:linear-gradient(160deg,#adb5bd,#868e96)}
+
+/* ---- cards ---- */
+.card{background:#10151d;border:1px solid #1b2431;border-radius:16px;padding:14px;margin-bottom:10px}
+.card>.hd{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;
+  letter-spacing:.09em;color:#6c7d95;margin-bottom:10px;font-weight:700}
+.card>.hd .sp{flex:1}
+
+/* ---- big readouts ---- */
+.big{font-size:84px;line-height:.92;font-weight:800;letter-spacing:-.03em;text-align:center;margin:4px 0}
+.big.sm{font-size:60px}
+.sub{text-align:center;color:#7b8ba3;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-top:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;text-align:center;margin-top:12px}
+.cell{background:#0c1119;border:1px solid #1a2230;border-radius:11px;padding:9px 4px}
+.cell .v{font-size:22px;font-weight:700;line-height:1.1}
+.cell .k{font-size:9.5px;color:#6c7d95;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;font-weight:600}
+
+/* ---- level gauge ---- */
+.lvlbox{position:relative;height:150px;margin:6px 0 2px}
+#lvlCv{width:100%;height:100%;display:block}
+.lvlnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:44px;font-weight:800;pointer-events:none;letter-spacing:-.02em}
+.lvlnum small{font-size:18px;opacity:.55;margin-left:2px}
+
+/* ---- bars / chart ---- */
+canvas.chart{width:100%;height:110px;display:block;background:#0b1017;border-radius:10px}
+.bar{height:8px;background:#0c1119;border-radius:99px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .18s,background .18s}
+
+/* ---- rep list ---- */
+.reps{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.rep{flex:0 0 auto;min-width:36px;text-align:center;background:#0c1119;border:1px solid #1a2230;
+  border-radius:8px;padding:5px 6px;font-size:11px;font-weight:700}
+.rep small{display:block;font-size:9px;color:#6c7d95;font-weight:600}
+.rep.bad{border-color:#5a2230;background:#1a0d12}
+.rep.tired{border-color:#5a4a1a;background:#1a1508}
+
+/* ---- bottom bar ---- */
+.dock{position:fixed;left:0;right:0;bottom:0;background:rgba(10,13,18,.93);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #1a2230;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:40}
+.dockin{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:7px}
+.btn{background:#182130;border:1px solid #253243;color:#dfe7f2;border-radius:13px;
+  padding:13px 6px;font-size:12.5px;font-weight:700;text-align:center;cursor:pointer;
+  transition:.12s;line-height:1.25}
+.btn:active{transform:scale(.96);background:#1f2b3d}
+.btn.prim{background:linear-gradient(160deg,#2f7cf6,#1858c9);border-color:transparent;color:#fff}
+.btn.dan{background:linear-gradient(160deg,#e8434f,#b81f2b);border-color:transparent;color:#fff}
+.btn.ok{background:linear-gradient(160deg,#2fd07a,#12a35a);border-color:transparent;color:#04210f}
+.btn.gh{background:transparent}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn .s{display:block;font-size:9.5px;font-weight:600;opacity:.65;margin-top:1px}
+.btn.sq{width:52px;padding:13px 0;font-size:18px}
+
+/* ---- sheets ---- */
+.sheet{position:fixed;inset:0;background:rgba(5,7,11,.72);backdrop-filter:blur(3px);
+  z-index:60;display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheetin{background:#0e131b;border-top:1px solid #223047;border-radius:20px 20px 0 0;
+  width:100%;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:16px 14px calc(24px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+.sheet h2{font-size:17px;margin-bottom:12px;display:flex;align-items:center}
+.sheet h2 .sp{flex:1}
+.row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #17202c;font-size:14px}
+.row:last-child{border-bottom:0}
+.row .sp{flex:1}
+.row label{flex:1;color:#c6d2e2}
+.row small{display:block;color:#6c7d95;font-size:11px;margin-top:2px;font-weight:400}
+input[type=range]{width:130px;accent-color:#2f7cf6}
+input[type=number]{width:74px;background:#0c1119;border:1px solid #24303f;color:#e8edf5;
+  border-radius:9px;padding:8px;font-size:15px;text-align:center;font-variant-numeric:tabular-nums}
+select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9px;padding:8px;font-size:14px}
+.sw{width:50px;height:29px;background:#242f3f;border-radius:99px;position:relative;
+  flex:0 0 auto;transition:.18s;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;
+  background:#fff;transition:.18s}
+.sw.on{background:#2fd07a}
+.sw.on::after{transform:translateX(21px)}
+
+/* ---- rest overlay ---- */
+.rest{position:fixed;inset:0;background:#070a0f;z-index:55;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.rest.on{display:flex}
+.rest .t{font-size:112px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.rest .lbl{font-size:13px;color:#7b8ba3;text-transform:uppercase;letter-spacing:.14em;font-weight:700}
+.rest .hint{font-size:12px;color:#55637a;margin-top:14px;text-align:center;padding:0 30px;line-height:1.5}
+.rest.frozen .t{color:#4dabf7}
+.rest.go .t{color:#2fd07a}
+
+/* ---- misc ---- */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:#1c2735;
+  border:1px solid #2c3a4e;color:#e8edf5;padding:10px 16px;border-radius:12px;font-size:13px;
+  font-weight:600;z-index:70;opacity:0;pointer-events:none;transition:.25s;max-width:88%;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}
+.hint{color:#6c7d95;font-size:11.5px;line-height:1.5}
+.warnbox{background:#1a0d12;border:1px solid #5a2230;color:#ff8f9a;border-radius:11px;
+  padding:10px 12px;font-size:12.5px;margin-top:8px;line-height:1.45}
+.okbox{background:#08190f;border:1px solid #1c5a35;color:#6ee7a0;border-radius:11px;
+  padding:10px 12px;font-size:12.5px;margin-top:8px;line-height:1.45}
+pre.dbg{background:#080c12;border:1px solid #18202c;border-radius:10px;padding:9px;
+  font-size:10.5px;line-height:1.5;overflow-x:auto;color:#8fa0b8;margin:6px 0 0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;max-height:230px}
+.hide{display:none!important}
+textarea.exp{width:100%;height:44vh;background:#080c12;color:#c6d2e2;border:1px solid #24303f;
+  border-radius:10px;padding:9px;font-size:10.5px;font-family:ui-monospace,Menlo,monospace;
+  -webkit-user-select:text;user-select:text}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <span class="dot" id="dot"></span>
+    <span id="stat">не підключено</span>
+    <span class="sp"></span>
+    <span class="chip" id="chBat">🔋 —</span>
+    <span class="chip" id="chHz">— Гц</span>
+    <span class="chip" id="chOk">—%</span>
+  </div>
+
+  <div class="tabs" id="tabs" style="grid-template-columns:repeat(5,1fr)">
+    <div class="tab act" data-m="0"><span class="ic">📡</span>Дані</div>
+    <div class="tab" data-m="1"><span class="ic">🔴</span>Лічильн</div>
+    <div class="tab" data-m="2"><span class="ic">🟡</span>Рівень</div>
+    <div class="tab" data-m="3"><span class="ic">🔵</span>Швидк</div>
+    <div class="tab" data-m="4"><span class="ic">🔬</span>Лаб</div>
+  </div>
+
+  <!-- =============== MODE 0 : RAW / SCOUT =============== -->
+  <section id="p0">
+    <div class="card">
+      <div class="hd">Акселерометр <span class="sp"></span><span id="rawA" class="mono">—</span></div>
+      <canvas class="chart" id="cvA"></canvas>
+    </div>
+    <div class="card">
+      <div class="hd">Гіроскоп <span class="sp"></span><span id="rawG" class="mono">—</span></div>
+      <canvas class="chart" id="cvG"></canvas>
+    </div>
+    <div class="card">
+      <div class="hd">Вертикаль (рух ваги)</div>
+      <canvas class="chart" id="cvV"></canvas>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="d_av">0.00</div><div class="k">а верт, g</div></div>
+        <div class="cell"><div class="v mono" id="d_vv">0.00</div><div class="k">швидк, м/с</div></div>
+        <div class="cell"><div class="v mono" id="d_tilt">0°</div><div class="k">нахил</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="hd">Діагностика</div>
+      <div class="hint" id="scoutTxt">nRF52810 + LSM6DSL · кадр 14 Б · аксель ÷2048 = g (±16 g) · гіро ÷131 = °/с</div>
+      <pre class="dbg" id="scout">—</pre>
+    </div>
+  </section>
+
+  <!-- =============== MODE 1 : COUNTER & TEMPO =============== -->
+  <section id="p1" class="hide">
+    <div class="card">
+      <div class="hd">Повторення <span class="sp"></span><span id="c_state">—</span></div>
+      <div class="big mono" id="c_reps">0</div>
+      <div class="sub" id="c_phase">чекаю рух</div>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="c_tut">0<small style="font-size:12px">с</small></div><div class="k">TUT</div></div>
+        <div class="cell"><div class="v mono" id="c_ecc">—</div><div class="k">опускання</div></div>
+        <div class="cell"><div class="v mono" id="c_rom">—</div><div class="k">амплітуда</div></div>
+      </div>
+      <div class="bar"><i id="c_bar" style="width:0;background:#2f7cf6"></i></div>
+      <div class="reps" id="c_list"></div>
+    </div>
+    <div class="card">
+      <div class="hd">Траєкторія</div>
+      <canvas class="chart" id="cvC"></canvas>
+      <div class="hint" style="margin-top:8px">Синя — швидкість вгору/вниз. Зелені смуги — зараховані повтори.</div>
+    </div>
+  </section>
+
+  <!-- =============== MODE 2 : LEVEL =============== -->
+  <section id="p2" class="hide">
+    <div class="card">
+      <div class="hd">Крен грифа <span class="sp"></span><span id="l_state">нуль не задано</span></div>
+      <div class="lvlbox"><canvas id="lvlCv"></canvas><div class="lvlnum mono" id="l_deg">—</div></div>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="l_max">0°</div><div class="k">макс крен</div></div>
+        <div class="cell"><div class="v mono" id="l_pct">—</div><div class="k">у нормі</div></div>
+        <div class="cell"><div class="v mono" id="l_side">—</div><div class="k">схил</div></div>
+      </div>
+      <div id="l_hint" class="hint" style="margin-top:10px">
+        Візьми штангу в стартову позицію й <b>потримай нерухомо ~1.2 с</b> — нуль стане сам (пік). Далі тиша = рівно, писк у вухо = завалив той бік.
+      </div>
+    </div>
+    <div class="card">
+      <div class="hd">Історія крену</div>
+      <canvas class="chart" id="cvL"></canvas>
+    </div>
+  </section>
+
+  <!-- =============== MODE 3 : VBT =============== -->
+  <section id="p3" class="hide">
+    <div class="card">
+      <div class="hd">Потужність повтору <span class="sp"></span><span id="v_state">—</span></div>
+      <div class="big sm mono" id="v_pct">—<small style="font-size:26px">%</small></div>
+      <div class="sub" id="v_sub">від базового</div>
+      <div class="bar"><i id="v_bar" style="width:0;background:#2fd07a"></i></div>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="v_mcv">—</div><div class="k">м/с зараз</div></div>
+        <div class="cell"><div class="v mono" id="v_base">—</div><div class="k">база м/с</div></div>
+        <div class="cell"><div class="v mono" id="v_reps">0</div><div class="k">повторів</div></div>
+      </div>
+      <div class="reps" id="v_list"></div>
+      <div class="hint" style="margin-top:10px">Перші 2 повтори = 100%. Падіння нижче порогу — сигнал зупинити підхід.</div>
+    </div>
+    <div class="card">
+      <div class="hd">Крива втоми</div>
+      <canvas class="chart" id="cvVb"></canvas>
+    </div>
+  </section>
+
+  <!-- =============== MODE 4 : LAB =============== -->
+  <section id="p4" class="hide">
+    <div class="card">
+      <div class="hd">Живі піки <span class="sp"></span><span id="lab_hz" class="mono">—</span></div>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="pk_jerk">0.00</div><div class="k">ривок, g</div>
+          <div class="bar"><i id="pkb_jerk" style="width:0;background:#ff6b6b"></i></div></div>
+        <div class="cell"><div class="v mono" id="pk_mot">0.00</div><div class="k">рух, g</div>
+          <div class="bar"><i id="pkb_mot" style="width:0;background:#ffd43b"></i></div></div>
+        <div class="cell"><div class="v mono" id="pk_gyr">0</div><div class="k">гіро, °/с</div>
+          <div class="bar"><i id="pkb_gyr" style="width:0;background:#4dabf7"></i></div></div>
+      </div>
+      <div class="grid3">
+        <div class="cell"><div class="v mono" id="pk_vel">0.00</div><div class="k">швидк, м/с</div></div>
+        <div class="cell"><div class="v mono" id="pk_tilt">0</div><div class="k">крен, °</div></div>
+        <div class="cell"><div class="v mono" id="pk_btn">0</div><div class="k">натискань</div></div>
+      </div>
+      <div class="hint" style="margin-top:8px">Піки тримаються 4 с. Червона смуга — поточний поріг тапа
+        (<span id="lab_thr" class="mono">—</span> g). Якщо твій тап її не перебиває — поріг завеликий.</div>
+      <canvas class="chart" id="cvLab" style="margin-top:8px"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="hd">Запис зразка <span class="sp"></span><span id="lab_state">готовий</span></div>
+      <div class="hint">Обери, що записуєш, тисни «Записати» — буде відлік 3-2-1, потім 6 секунд запису.
+        Роби рівно те, що написано в назві.</div>
+      <div class="row" style="border:0;padding-top:12px">
+        <select id="lab_lbl" style="flex:1">
+          <option value="спокій">спокій — лежить на столі, не чіпаю</option>
+          <option value="тап1">1 тап — один раз стукнути пальцем</option>
+          <option value="тап2">2 тапи — двічі поспіль</option>
+          <option value="тап3">3 тапи — тричі поспіль</option>
+          <option value="кнопка">кнопка — клік, клік, утримання</option>
+          <option value="повтори">повтори — 3 рухи вгору-вниз</option>
+          <option value="крен">крен — нахилити вліво, потім вправо</option>
+          <option value="удар">удар — стукнути блоками/об стіл (НЕ тап)</option>
+          <option value="ходьба">ходьба — просто пройтись із ним</option>
+        </select>
+      </div>
+      <div class="row" style="border:0">
+        <span class="btn prim" id="lab_rec" style="flex:2">Записати 6 с</span>
+        <span class="btn" id="lab_clr" style="flex:1">Очистити</span>
+      </div>
+      <pre class="dbg" id="lab_list">Записів поки немає.</pre>
+      <div class="row" style="border:0">
+        <span class="btn ok" id="lab_calc" style="flex:1">Порадити пороги</span>
+        <span class="btn" id="lab_csv" style="flex:1">Експорт лабораторії</span>
+      </div>
+      <div id="lab_advice"></div>
+    </div>
+  </section>
+
+  <!-- =============== SESSION =============== -->
+  <div class="card" id="sessCard">
+    <div class="hd">Тренування <span class="sp"></span><span id="s_clock" class="mono">0:00</span></div>
+    <div class="grid3">
+      <div class="cell"><div class="v mono" id="s_sets">0</div><div class="k">підходів</div></div>
+      <div class="cell"><div class="v mono" id="s_reps">0</div><div class="k">повторів</div></div>
+      <div class="cell"><div class="v mono" id="s_tut">0с</div><div class="k">під вагою</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- =============== DOCK =============== -->
+<div class="dock">
+  <div class="dockin">
+    <div class="btn prim" id="bConn">Підключити<span class="s">Triki</span></div>
+    <div class="btn ok" id="bSet">Завершити<span class="s">підхід · 2 кліки</span></div>
+    <div class="btn" id="bZero">Нуль<span class="s">утримати кнопку</span></div>
+    <div class="btn sq gh" id="bCfg">⚙</div>
+  </div>
+</div>
+
+<!-- =============== REST OVERLAY =============== -->
+<div class="rest" id="rest">
+  <div class="lbl" id="r_lbl">відпочинок</div>
+  <div class="t mono" id="r_t">1:30</div>
+  <div class="btn gh" id="r_skip" style="margin-top:10px;padding:11px 26px">Пропустити</div>
+  <div class="hint">Поклади кришку <b>магнітом догори</b> — таймер завмре.<br>Кришкою догори — йде відлік.</div>
+</div>
+
+<!-- =============== SETTINGS =============== -->
+<div class="sheet" id="cfg"><div class="sheetin">
+  <h2>Налаштування<span class="sp"></span><span class="btn gh sq" id="cfgX" style="width:40px;padding:8px 0">✕</span></h2>
+
+  <div class="row"><label>Аудіо-режим<small>«Тільки піски» гарантовано не чіпає музику</small></label>
+    <select id="oAudio"><option value="beep">Тільки піски</option><option value="voice" selected>Голос + піски</option><option value="off">Вимкнено</option></select></div>
+  <div class="row"><label>Гучність підказок<small>щоб лише трохи приглушувало музику</small></label>
+    <input type="range" id="oVol" min="0" max="100" value="30"></div>
+  <div class="row"><label>Екран не гасне</label><div class="sw on" id="oWake"></div></div>
+
+  <div class="row"><label>Відпочинок, с</label><input type="number" id="oRest" value="90" min="10" max="600" step="5"></div>
+  <div class="row"><label>Мертва зона крену, °<small>менше — суворіше</small></label><input type="number" id="oDead" value="5" min="1" max="20" step="1"></div>
+  <div class="row"><label>Мін. час опускання, с<small>швидше — попередить</small></label><input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
+  <div class="row"><label>Поріг втоми, %<small>падіння швидкості</small></label><input type="number" id="oFat" value="20" min="5" max="50" step="1"></div>
+  <div class="row"><label>Мін. амплітуда, см<small>щоб не рахувати сіпання</small></label><input type="number" id="oRom" value="12" min="3" max="100" step="1"></div>
+  <div class="row"><label>Чутливість тапів<small>більше — легше стукнути</small></label><input type="range" id="oTap" min="10" max="90" value="45"></div>
+  <div class="row"><label>Поміняти ліво/право</label><div class="sw" id="oFlip"></div></div>
+
+  <div class="row"><label>Демо без пристрою<small>синтетичні дані для перевірки</small></label><div class="sw" id="oDemo"></div></div>
+  <div class="row"><label>Показати діагностику</label><div class="sw" id="oDiag"></div></div>
+
+  <div class="row"><span class="btn" id="bCsv" style="flex:1">Експорт CSV</span>
+    <span class="btn" id="bReset" style="flex:1">Скинути сесію</span></div>
+
+  <div class="hint" style="margin-top:12px">
+    <b>Кнопка на кришці</b> (основне керування):<br>
+    1 клік — наступний режим · 2 кліки — завершити підхід ·
+    утримати ~1.2 с — задати нуль.<br><br>
+    <b>Постукування</b> працює як запасний шлях, коли тиснути кнопку незручно:
+    той самий набір — 1 / 2 / 3 тапи. Приймається лише коли пристрій перед тим
+    лежав спокійно, тож повтори його не вмикають.<br><br>
+    <b>Якщо Triki не видно</b> — він спить. Натисни кнопку на кришці
+    просто перед тим, як тиснути «Підключити».<br><br>
+    <b>iOS:</b> потрібен браузер <b>Bluefy</b> — Safari не вміє Web Bluetooth.
+  </div>
+</div></div>
+
+<!-- =============== EXPORT =============== -->
+<div class="sheet" id="exp"><div class="sheetin">
+  <h2>CSV<span class="sp"></span><span class="btn gh sq" id="expX" style="width:40px;padding:8px 0">✕</span></h2>
+  <div class="hint">Виділи все й скопіюй, або тисни кнопку.</div>
+  <textarea class="exp" id="expT" readonly></textarea>
+  <div class="btn prim" id="expCopy" style="margin-top:10px">Скопіювати</div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════
+   IronCap — Triki gym trainer
+
+   ЗАЛІЗО (за RE-документацією + підтверджено власним логом):
+     MCU nRF52810 + IMU ST LSM6DSL, внутрішня частота 104 Гц.
+   КАДР 14 байт:
+     [0]=0x22 хедер · [1]=КНОПКА (0x00 відпущена / 0x01 натиснута)
+     [2..7]  = gyro  X,Y,Z  int16 LE   → ділити на 131.0  → °/с
+     [8..13] = accel X,Y,Z  int16 LE   → ділити на 2048.0 → g  (±16 g)
+   Перевірка з логу: канали 8-13 у спокої дали |вектор| ≈ 1917 ≈ 2048,
+   тобто це саме гравітація — акселерометр справді ДРУГИЙ, не перший.
+   Нотифікація приходить «пачкою» з кількох кадрів на довільному
+   зміщенні → скануємо хедер, а не читаємо жорсткі офсети.
+   ══════════════════════════════════════════════════════════════════ */
+
+const NUS   = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const C_W   = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const C_N   = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+const C_LED = '6e400004-b5a3-f393-e0a9-e50e24dcca9e';
+const INIT1 = Uint8Array.of(0x01,0x00);
+// 0x68 = 104 → повні 104 Гц з LSM6DSL (раніше стояло 0x34 = 52 Гц).
+const INIT2 = Uint8Array.of(0x20,0x10,0x00,0xD0,0x07,0x68,0x00,0x03);
+const G_MS2 = 9.80665;
+const ACC_LSB  = 2048.0;   // LSB на 1 g   (діапазон ±16 g)
+const GYR_LSB  = 131.0;    // LSB на 1 °/с
+
+const $  = id => document.getElementById(id);
+const now = () => performance.now()/1000;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+/* ---------- налаштування ---------- */
+const CFG = {
+  audio:'voice', vol:30, wake:true, rest:90, dead:5, ecc:1.0, fat:20,
+  rom:12, tap:45, flip:false, demo:false, diag:false
+};
+try{ Object.assign(CFG, JSON.parse(localStorage.getItem('ironcap.cfg')||'{}')); }catch(e){}
+const saveCfg = () => { try{ localStorage.setItem('ironcap.cfg', JSON.stringify(CFG)); }catch(e){} };
+
+/* ---------- стан ---------- */
+const S = {
+  mode:0, dev:null, srv:null, chW:null, connected:false,
+  tLast:0, dt:0.055, hz:0, pkTotal:0, pkFrames:0, pkSkip:0, hzEma:0,
+  grav:[0,0,0], gInit:false, gn:2048,      // gn = LSB на 1g (вчиться сама)
+  lin:[0,0,0], prevLin:[0,0,0],
+  gyBias:[0,0,0], gyRate:0,
+  aV:0, vel:0, velRaw:0, velDC:0, disp:0, warm:0,  // вертикаль
+  motion:0, motionEma:0, stillT:0, stillTPrev:0, moveT:0,
+  capAxis:2, capSign:1,                    // вісь нормалі до кришки
+  // кнопка + тапи
+  btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false, btnPress:0,
+  tapT:0, tapN:0, tapArm:0, jerk:0,
+  // рівень
+  zRef:null, zDir:null, tiltDeg:0, tiltSigned:0, lMax:0, lIn:0, lTot:0, lWarn:0, moved:false,
+  // лічильник
+  phase:'idle', pStart:0, pDisp:0, pPeakV:0, pPeakA:0, upDur:0, eccDur:0,
+  reps:[], tut:0, lastRepT:0, cState:'',
+  base:null, fatigued:false,
+  // сесія
+  t0:now(), sets:0, allReps:0, allTut:0, log:[], running:false,
+  restLeft:0, restOn:false, restFrozen:false, restT:0
+};
+
+/* ══════════ AUDIO ══════════════════════════════════════════════════
+   Головна вимога: НЕ глушити музику. Тому:
+   • audioSession.type = 'ambient'  → iOS змішує наш звук з музикою
+   • низький gain (за замовч. 0.30) → лише злегка чути поверх треку
+   • голос (SpeechSynthesis) на iOS може коротко приглушити музику —
+     тому є режим «Тільки піски».                                   */
+let AC=null, MASTER=null, tone=null;
+function audioInit(){
+  if(AC) return;
+  try{ if(navigator.audioSession) navigator.audioSession.type='ambient'; }catch(e){}
+  const A = window.AudioContext||window.webkitAudioContext; if(!A) return;
+  AC = new A();
+  MASTER = AC.createGain(); MASTER.gain.value = CFG.vol/100; MASTER.connect(AC.destination);
+}
+function audioResume(){ audioInit(); if(AC && AC.state!=='running') AC.resume().catch(()=>{}); }
+function setVol(){ if(MASTER) MASTER.gain.setTargetAtTime(CFG.vol/100, AC.currentTime, .05); }
+
+function beep(freq=880, dur=.09, pan=0, type='sine', gain=1){
+  if(CFG.audio==='off') return; audioResume(); if(!AC) return;
+  const t=AC.currentTime, o=AC.createOscillator(), g=AC.createGain();
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(gain,t+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  let node=g;
+  if(AC.createStereoPanner && pan){ const p=AC.createStereoPanner(); p.pan.value=clamp(pan,-1,1); g.connect(p); node=p; }
+  o.connect(g); node.connect(MASTER); o.start(t); o.stop(t+dur+.02);
+}
+function chord(list){ list.forEach(([f,d,dl,p])=>setTimeout(()=>beep(f,d||.09,p||0),dl||0)); }
+const sfxRep    = ()=>beep(1180,.07,0,'sine',.9);
+const sfxFast   = ()=>chord([[300,.12],[300,.12,140]]);
+const sfxGong   = ()=>{ beep(196,.9,0,'triangle',1); setTimeout(()=>beep(147,1.1,0,'triangle',.8),60); };
+const sfxTap    = ()=>beep(1500,.04,0,'square',.5);
+const sfxSet    = ()=>chord([[660,.1],[880,.14,110]]);
+const sfxReady  = ()=>chord([[520,.12],[520,.12,180]]);
+const sfxGo     = ()=>chord([[880,.13],[1320,.2,150]]);
+const sfxZero   = ()=>chord([[1046,.08],[1568,.1,90]]);
+
+/* мова */
+let lastSpeak=0;
+function say(txt, force){
+  if(CFG.audio!=='voice') return;
+  const t=now(); if(!force && t-lastSpeak<1.1) return; lastSpeak=t;
+  try{
+    const u=new SpeechSynthesisUtterance(txt);
+    u.lang='uk-UA'; u.rate=1.12; u.pitch=1; u.volume=clamp(CFG.vol/100+.15,0,1);
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+/* монотонний писк для крену — тримається, поки крен поза зоною */
+function toneOn(freq,pan){
+  audioResume(); if(!AC||CFG.audio==='off') return;
+  if(!tone){
+    tone={o:AC.createOscillator(),g:AC.createGain(),p:(AC.createStereoPanner?AC.createStereoPanner():null)};
+    tone.o.type='sawtooth'; tone.g.gain.value=0;
+    tone.o.connect(tone.g);
+    if(tone.p){ tone.g.connect(tone.p); tone.p.connect(MASTER); } else tone.g.connect(MASTER);
+    tone.o.start();
+  }
+  tone.o.frequency.setTargetAtTime(freq,AC.currentTime,.03);
+  if(tone.p) tone.p.pan.setTargetAtTime(clamp(pan,-1,1),AC.currentTime,.05);
+  tone.g.gain.setTargetAtTime(.5,AC.currentTime,.04);
+}
+function toneOff(){ if(tone&&AC) tone.g.gain.setTargetAtTime(0,AC.currentTime,.08); }
+
+/* ---------- світлодіод на кришці (бітова маска, біт 0) ---------- */
+let ledState=0, ledBusy=false;
+function led(on){
+  on=on?1:0;
+  if(!S.chLed || ledState===on || ledBusy) return;
+  ledState=on; ledBusy=true;
+  S.chLed.writeValue(Uint8Array.of(on)).catch(()=>{}).then(()=>{ ledBusy=false; });
+}
+
+/* ---------- toast ---------- */
+let toastT=0;
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),1900); }
+
+/* ══════════ BLE ══════════ */
+async function connect(){
+  if(!navigator.bluetooth){
+    toast('Web Bluetooth недоступний — відкрий у Bluefy'); return;
+  }
+  audioResume();
+  try{
+    setStat('шукаю…','warn');
+    const dev = await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true, optionalServices:[NUS,'battery_service']
+    });
+    S.dev=dev;
+    dev.addEventListener('gattserverdisconnected', onDisc);
+    await attach(dev);
+  }catch(e){
+    setStat('не підключено'); if(e && e.name!=='NotFoundError') toast('Помилка: '+(e.message||e));
+  }
+}
+async function attach(dev){
+  setStat('підключаюсь…','warn');
+  const srv = await dev.gatt.connect(); S.srv=srv;
+  const nus = await srv.getPrimaryService(NUS);
+  const nt  = await nus.getCharacteristic(C_N);
+  await nt.startNotifications();
+  nt.addEventListener('characteristicvaluechanged', onNotify);
+  try{ S.chLed=await nus.getCharacteristic(C_LED); await S.chLed.writeValue(Uint8Array.of(0)); }catch(e){}
+  S.chW = await nus.getCharacteristic(C_W);
+  const wr = v => S.chW.writeValueWithoutResponse
+      ? S.chW.writeValueWithoutResponse(v)
+      : S.chW.writeValue(v);
+  await wr(INIT1);
+  await new Promise(r=>setTimeout(r,120));
+  try{ await wr(INIT2); }catch(e){}
+  S.connected=true; S.running=true; S.t0=now();
+  setStat(dev.name||'Triki','on');
+  $('bConn').innerHTML='Відключити<span class="s">'+((dev.name||'Triki').slice(0,12))+'</span>';
+  $('bConn').classList.remove('prim'); $('bConn').classList.add('dan');
+  readBattery(srv);
+  wakeLock();
+  say('Підключено');
+}
+async function readBattery(srv){
+  try{
+    const bs=await srv.getPrimaryService('battery_service');
+    const bc=await bs.getCharacteristic('battery_level');
+    const upd=v=>$('chBat').innerHTML='🔋 <b>'+v+'%</b>';
+    upd((await bc.readValue()).getUint8(0));
+    await bc.startNotifications();
+    bc.addEventListener('characteristicvaluechanged',e=>upd(e.target.value.getUint8(0)));
+  }catch(e){}
+}
+function onDisc(){
+  S.connected=false; setStat('зв\'язок втрачено','err'); toast('Triki відключився');
+  $('bConn').innerHTML='Підключити<span class="s">Triki</span>';
+  $('bConn').classList.add('prim'); $('bConn').classList.remove('dan');
+  say('Зв\'язок втрачено', true);
+  if(S.dev) setTimeout(()=>{ if(!S.connected&&S.dev) attach(S.dev).catch(()=>{}); }, 2500);
+}
+function disconnect(){
+  S.dev && S.dev.gatt && S.dev.gatt.connected && S.dev.gatt.disconnect();
+  S.connected=false; setStat('не підключено');
+  $('bConn').innerHTML='Підключити<span class="s">Triki</span>';
+  $('bConn').classList.add('prim'); $('bConn').classList.remove('dan');
+}
+function setStat(t,cls){ $('stat').textContent=t; $('dot').className='dot'+(cls?' '+cls:''); }
+
+/* ---------- ПАРСЕР: скан маркера 22 00 у межах однієї нотифікації ---------- */
+let scoutSeen = {};
+function onNotify(e){
+  const dv=e.target.value, n=dv.byteLength;
+  S.pkTotal++;
+  let i=0, got=0;
+  while(i+14<=n){
+    const b1=dv.getUint8(i+1);
+    // приймаємо ОБИДВА хедери: 22 00 (кнопка відпущена) і 22 01 (натиснута).
+    // Якби шукали лише 22 00 — губили б усі кадри під час натискання.
+    if(dv.getUint8(i)===0x22 && (b1===0x00||b1===0x01)){
+      frame(dv,i+2,b1); got++; i+=14;
+    } else { i++; }
+  }
+  S.pkSkip += (got?0:1);
+  if(CFG.diag) scout(dv,n,got);
+}
+function scout(dv,n,got){
+  const b=[]; for(let k=0;k<n;k++) b.push(dv.getUint8(k));
+  const key='len'+n;
+  const rec = scoutSeen[key] || (scoutSeen[key]={n:0,frames:0,b1:{},head:{}});
+  rec.n++; rec.frames+=got;
+  rec.b1[b[1]] = (rec.b1[b[1]]||0)+1;
+  rec.head[((b[0]||0).toString(16).padStart(2,'0'))] = (rec.head[b[0].toString(16).padStart(2,'0')]||0)+1;
+}
+
+function frame(dv,o,btn){
+  const t=now();
+  let dt = S.tLast? t-S.tLast : .0096;
+  S.tLast=t;
+  if(dt<=0||dt>1) dt=.0096;
+  S.dt=dt;
+  S.hzEma += .02*(1/dt - S.hzEma);
+  S.pkFrames++;
+  // ПОРЯДОК ОСЕЙ: спершу гіроскоп (2-7), потім акселерометр (8-13)
+  const g=[dv.getInt16(o,true),   dv.getInt16(o+2,true), dv.getInt16(o+4,true)];
+  const a=[dv.getInt16(o+6,true), dv.getInt16(o+8,true), dv.getInt16(o+10,true)];
+  if(btn!==undefined) button(btn,t);
+  physics(a,g,dt,t);
+}
+
+/* ══════════ ФІЗИКА ══════════ */
+function physics(a,g,dt,t){
+  /* 1. гравітація — АДАПТИВНА EMA.
+        У спокої женемо швидко (τ=0.3 с), щоб миттєво зловити нову
+        орієнтацію. Під час руху — повільно (τ=4 с), інакше фільтр
+        починає стежити за самим повторенням і з'їдає його амплітуду. */
+  if(!S.gInit){ S.grav=[a[0],a[1],a[2]]; S.gyBias=[g[0],g[1],g[2]]; S.gInit=true; }
+  const tauG = (S.warm<2.0 || S.stillT>.25) ? 0.3 : 2.0;
+  const kG = 1-Math.exp(-dt/tauG);
+  for(let i=0;i<3;i++) S.grav[i]+=kG*(a[i]-S.grav[i]);
+
+  /* 2. лінійне прискорення */
+  for(let i=0;i<3;i++) S.lin[i]=a[i]-S.grav[i];
+  const gLen=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
+  const linMag=Math.hypot(S.lin[0],S.lin[1],S.lin[2]);
+  S.motion = linMag/(S.gn||gLen);
+
+  /* 3. гіроскоп: вчимо зсув у спокої (це фікс «лежить на столі») */
+  // те саме застереження: вчимо зсув лише при СТІЙКОМУ спокої
+  if(S.motionEma<.03 && S.motion<.05){ for(let i=0;i<3;i++) S.gyBias[i]+=.04*(g[i]-S.gyBias[i]); }
+  // у справжніх °/с: паспортний множник LSM6DSL = 131 LSB на °/с
+  const gr=Math.hypot(g[0]-S.gyBias[0],g[1]-S.gyBias[1],g[2]-S.gyBias[2])/GYR_LSB;
+  S.gyRate += .25*(gr-S.gyRate);
+
+  /* 4. САМОКАЛІБРУВАННЯ МАСШТАБУ: у спокої |g-вектор| = рівно 1g.
+        УВАГА: миттєве прискорення дорівнює нулю на піку швидкості —
+        двічі за повтор. Тому «спокій» рахуємо по вікну (τ=0.6 с),
+        інакше детектор спрацьовує посеред руху й обнуляє швидкість. */
+  S.motionEma += (1-Math.exp(-dt/0.6))*(S.motion-S.motionEma);
+  const still = S.motionEma<.022 && S.motion<.05 && S.gyRate<8;   // <8 °/с
+  if(still){
+    S.stillT+=dt; S.moveT=0;
+    S.gn += .02*(gLen-S.gn);
+    // вісь нормалі до кришки = найбільша складова гравітації в спокої
+    let mx=0,ix=2; for(let i=0;i<3;i++) if(Math.abs(S.grav[i])>mx){mx=Math.abs(S.grav[i]);ix=i;}
+    if(mx>gLen*.85){ S.capAxis=ix; S.capSign=S.grav[ix]>0?1:-1; }
+  } else { S.moveT+=dt; S.stillT=0; }
+
+  /* 5. вертикаль: проєкція лінійного прискорення на напрям гравітації */
+  const u=[S.grav[0]/gLen,S.grav[1]/gLen,S.grav[2]/gLen];
+  const aVlsb = S.lin[0]*u[0]+S.lin[1]*u[1]+S.lin[2]*u[2];
+  S.aV = aVlsb/(S.gn||gLen);                 // у g, + = вгору
+  const aMs2 = S.aV*G_MS2;
+
+  /* 6. прогрів: поки гравітаційна EMA не збіглася, її «хвіст» дає
+        фальшивий сплеск прискорення. Один такий сплеск на старті
+        отруював базу VBT — тому перші секунди просто не рахуємо.   */
+  S.warm += dt;
+
+  /* 7. швидкість. Інтеграл прискорення завжди дрейфує, тому знімаємо
+        дрейф фільтром високих частот: швидкість снаряда за повний цикл
+        має нульове середнє, а дрейф — ні. τ=1.5 с (зріз 0.1 Гц) —
+        значно нижче темпу повторів (0.3–1 Гц), сигнал не страждає.
+        ZUPT у спокої добиває решту.                                */
+  if(S.warm<2.5 || (still && S.stillT>.2)){
+    S.velRaw=0; S.velDC=0; S.vel=0; S.disp=0;
+  } else {
+    S.velRaw += aMs2*dt;
+    S.velDC  += (1-Math.exp(-dt/1.5))*(S.velRaw-S.velDC);
+    S.vel     = S.velRaw - S.velDC;
+    S.disp   += S.vel*dt;
+  }
+
+  /* 8. нахил відносно нуля */
+  computeTilt(u);
+
+  /* 8. тапи по кришці */
+  detectTap(dt,t);
+
+  /* 9. режимна логіка */
+  repMachine(dt,t);
+  if(S.mode===2) levelLogic(dt,t);
+  restLogic(dt,t);
+
+  /* 10. лабораторія, графіки, лог */
+  labSample(a,g,dt,t);
+  pushCharts();
+  if(S.running && S.log.length<200000 && (S.pkFrames&1)===0){
+    S.log.push([Date.now(),(+S.aV.toFixed(4)),(+S.vel.toFixed(3)),(+S.tiltSigned.toFixed(2)),S.reps.length]);
+  }
+  for(let i=0;i<3;i++) S.prevLin[i]=S.lin[i];
+  S.stillTPrev=S.stillT;
+}
+
+/* ---------- нахил ---------- */
+function computeTilt(u){
+  if(!S.zRef){ S.tiltDeg=0; S.tiltSigned=0; return; }
+  const d=Math.acos(clamp(u[0]*S.zRef[0]+u[1]*S.zRef[1]+u[2]*S.zRef[2],-1,1))*180/Math.PI;
+  S.tiltDeg=d;
+  // знак: проєкція відхилення на вивчений (або евристичний) напрям «правий край вниз»
+  const dv=[u[0]-S.zRef[0],u[1]-S.zRef[1],u[2]-S.zRef[2]];
+  let dir=S.zDir;
+  if(!dir){ // евристика: беремо вісь, найменш пов'язану з гравітацією
+    let mn=1e9,ix=0; for(let i=0;i<3;i++) if(Math.abs(S.zRef[i])<mn){mn=Math.abs(S.zRef[i]);ix=i;}
+    dir=[0,0,0]; dir[ix]=1;
+  }
+  const s=dv[0]*dir[0]+dv[1]*dir[1]+dv[2]*dir[2];
+  S.tiltSigned = (s<0?-1:1)*d*(CFG.flip?-1:1);
+}
+function setZero(){
+  const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
+  S.zRef=[S.grav[0]/gl,S.grav[1]/gl,S.grav[2]/gl];
+  S.zDir=null; S.lMax=0; S.lIn=0; S.lTot=0; S.moved=false;
+  let mn=1e9,ix=0; for(let i=0;i<3;i++) if(Math.abs(S.zRef[i])<mn){mn=Math.abs(S.zRef[i]);ix=i;}
+  S.zDir=[0,0,0]; S.zDir[ix]=1;
+  sfxZero(); toast('Нуль задано'); say('Нуль');
+  $('l_state').textContent='нуль задано';
+  $('l_hint').innerHTML='Нуль зафіксовано. Тиша = рівно. Писк у вусі = той бік нижче. Мертва зона ±'+CFG.dead+'°.';
+}
+
+/* ══════════ КНОПКА НА КРИШЦІ ══════════
+   Байт 1 кадру: 0 відпущена, 1 натиснута. Ловимо фронти.
+   1 клік — наступний режим · 2 кліки — завершити підхід
+   утримання ≥1.2 с — калібрування нуля                            */
+function button(b,t){
+  const was=S.btn; S.btn=b;
+  if(b && !was){                       // натиснули
+    S.btnDown=t; S.btnLong=false;
+  } else if(b && was){                 // тримають
+    if(!S.btnLong && t-S.btnDown>1.2){ S.btnLong=true; setZero(); }
+  } else if(!b && was){                // відпустили
+    if(S.btnLong){ S.btnN=0; return; } // довге вже відпрацювало
+    if(t-S.btnDown>1.2) return;
+    S.btnN = (t-S.btnUp<0.45)? S.btnN+1 : 1;
+    S.btnUp=t; sfxTap();
+  }
+  if(S.btnN>0 && !b && t-S.btnUp>0.45){ const n=S.btnN; S.btnN=0; fireTap(n); }
+}
+
+/* ---------- тапи по кришці (запасний шлях, якщо тиснути незручно) ---------- */
+function detectTap(dt,t){
+  const dj=Math.hypot(S.lin[0]-S.prevLin[0],S.lin[1]-S.prevLin[1],S.lin[2]-S.prevLin[2])/(S.gn||2048);
+  S.jerk=dj;
+  const thr = 1.1 - CFG.tap/100;           // 45 → 0.65 g між семплами
+  // Приймаємо тапи лише коли пристрій спокійний (між підходами).
+  // Дивимось на спокій ПОПЕРЕДНЬОГО семпла: сам удар обнуляє stillT,
+  // тож перевірка «зараз» відкидала б кожен справжній тап.
+  const calm = S.stillTPrev>.35 || S.tapN>0;
+  // 0.2 с антидребезгу: людина швидше не стукає, а один удар дає
+  // сплеск і на фронті, і на спаді — інакше рахувався б двічі.
+  if(dj>thr && calm && t-S.tapArm>.20){
+    S.tapArm=t;
+    if(t-S.tapT>.55){ S.tapN=1; } else { S.tapN++; }
+    S.tapT=t; sfxTap();
+  }
+  if(S.tapN>0 && t-S.tapT>.55){ fireTap(S.tapN); S.tapN=0; }
+}
+function fireTap(n){
+  if(n===1){ setMode((S.mode%3)+1); }
+  else if(n===2){ endSet(); }
+  else if(n>=3){ setZero(); }
+}
+
+/* ══════════ РЕЖИМ 1+3: МАШИНА ПОВТОРЕНЬ ══════════════════════════
+   Фази за знаком вертикальної швидкості з гістерезисом:
+     idle → up (v>V_ON) → top (v<0) → down (v<-V_ON) → idle (|v|<V_OFF)
+   Повтор зараховується на завершенні циклу, якщо амплітуда ≥ CFG.rom
+   і тривалість у розумних межах. Це працює і для жиму (вниз-вгору),
+   і для тяги (вгору-вниз), бо рахуємо цілий цикл.                  */
+const V_ON=.13, V_OFF=.055;
+
+function repMachine(dt,t){
+  if(S.warm<2.5){ S.phase='idle'; return; }   // не рахуємо під час прогріву
+  const v=S.vel, ph=S.phase;
+
+  // TUT — час під навантаженням: рухаємось або тримаємо в напрузі
+  if(ph!=='idle'){ S.tut+=dt; S.allTut+=dt; }
+
+  if(ph==='idle'){
+    if(Math.abs(v)>V_ON){
+      S.phase = v>0?'up':'down';
+      S.pStart=t; S.pDisp=0; S.pPeakV=0; S.pPeakA=0; S.upDur=0; S.eccDur=0;
+      S.disp=0;
+    }
+  } else {
+    S.pDisp = Math.max(S.pDisp, Math.abs(S.disp));
+    S.pPeakV = Math.max(S.pPeakV, Math.abs(v));
+    S.pPeakA = Math.max(S.pPeakA, Math.abs(S.aV));
+    if(S.phase==='up'||S.phase==='upret') S.upDur+=dt;
+    if(S.phase==='down'||S.phase==='downret') S.eccDur+=dt;
+
+    // 1-ша зміна напрямку — пішли назад
+    if(S.phase==='up' && v<-V_ON){ S.phase='downret'; }
+    else if(S.phase==='down' && v>V_ON){ S.phase='upret'; }
+    // 2-га зміна напрямку — цикл замкнувся. Головний шлях: ловить серію
+    // без пауз, не залежить від того, чи впіймали ми момент v≈0.
+    else if(S.phase==='downret' && v>V_ON){ commitRep(t,'up'); }
+    else if(S.phase==='upret'   && v<-V_ON){ commitRep(t,'down'); }
+
+    // запасний шлях: атлет просто зупинився після останнього повтору
+    else if(Math.abs(v)<V_OFF){
+      if(S.phase==='upret'||S.phase==='downret') commitRep(t,null);
+      else if(t-S.pStart>2.5) S.phase='idle';   // рух був, але цикл не замкнувся
+    }
+    if(t-S.pStart>15) S.phase='idle';           // страховка
+  }
+  S.cState = S.phase;
+}
+
+function commitRep(t, chain){
+  const romCm = S.pDisp*100, dur = t-S.pStart;
+  const rom=S.pDisp, upDur=S.upDur, eccDur=S.eccDur, peakV=S.pPeakV;
+  // chain = напрямок нового циклу, якщо повтори йдуть без пауз
+  if(chain){ S.phase=chain; S.pStart=t; S.pDisp=0; S.pPeakV=0; S.pPeakA=0;
+             S.upDur=0; S.eccDur=0; S.disp=0; }
+  else S.phase='idle';
+  // санітарна стеля: жодна вправа в залі не має 1.5 м ходу снаряда
+  if(romCm < CFG.rom || romCm > 150 || dur<.4 || dur>14){ return; }
+
+  const mcv = rom/Math.max(.15,upDur);                 // середня концентрична, м/с
+  const ecc = eccDur;
+  const fast = ecc>0 && ecc<CFG.ecc;
+  const rep = {n:S.reps.length+1, rom:romCm, mcv:mcv, peak:peakV, ecc:ecc, dur:dur, fast:fast, pct:100};
+
+  // База VBT = НАЙШВИДШИЙ повтор підходу (стандарт «velocity loss»).
+  // Не «перші два»: перші повтори ще неусталені після старту руху,
+  // а найкращий сам знаходиться і перераховує всю історію заднім числом.
+  S.reps.push(rep); S.allReps++; S.lastRepT=t;
+  // Від 4 повторів беремо ДРУГИЙ за швидкістю, а не найшвидший: так
+  // один викид (типово — самий перший повтор, поки інтегратор ще
+  // не усівся) не задирає базу й не малює фальшиву втому.
+  const srt=S.reps.map(x=>x.mcv).sort((a,b)=>b-a);
+  S.base = srt.length>=4 ? srt[1] : srt[0];
+  S.reps.forEach(x=>{
+    // перший повтор підходу часто завищений: інтегратор ще не усівся.
+    // Не викидаємо його з ліку — але позначаємо як «прогрів» і не даємо
+    // впливати ні на базу, ні на середнє.
+    x.warm = S.reps.length>=4 && x.mcv > S.base*1.35;
+    x.pct  = Math.round(Math.min(x.mcv,S.base*1.6)/S.base*100);
+  });
+
+  sfxRep();
+  if(fast) setTimeout(()=>{ sfxFast(); say('Зашвидко'); },110);
+
+  // втома (режим 3 логіка активна завжди, озвучується у режимі 3)
+  if(S.base && S.reps.length>=4 && rep.pct < 100-CFG.fat && !S.fatigued){
+    S.fatigued=true;
+    setTimeout(()=>{ sfxGong(); say('Виснаження. Став вагу', true); }, 220);
+    toast('Втома: '+rep.pct+'% від бази');
+  }
+  renderReps();
+}
+
+/* ══════════ РЕЖИМ 2: РІВЕНЬ ══════════ */
+function levelLogic(dt,t){
+  if(S.moveT>1.0) S.moved=true;              // був рух після останнього нуля
+  if(!S.zRef){
+    // авто-нуль: нерухомо 1.2 с — і поїхали, нічого тикати не треба
+    if(S.stillT>1.2) setZero();
+    return;
+  }
+  // САМОПЕРЕСТАВЛЕННЯ: попрацював → поставив штангу → знову завмер на
+  // 2.5 с = це новий старт. Нуль оновлюється сам, без жодного дотику.
+  if(S.moved && S.stillT>2.5){ setZero(); return; }
+  const d=Math.abs(S.tiltSigned);
+  S.lTot+=dt; if(d<=CFG.dead) S.lIn+=dt;
+  S.lMax=Math.max(S.lMax,d);
+
+  if(d>CFG.dead){
+    const over=Math.min(1,(d-CFG.dead)/12);
+    const pan = S.tiltSigned>0? .85 : -.85;
+    toneOn(300+over*520, pan);
+    led(true);                                   // діод горить, поки косить
+    if(d>CFG.dead*2 && t-S.lWarn>2.2){
+      S.lWarn=t; say(S.tiltSigned>0?'Правий нижче':'Лівий нижче');
+    }
+  } else { toneOff(); led(false); }
+}
+
+/* ══════════ ТАЙМЕР ВІДПОЧИНКУ ══════════
+   Кришкою догори = йде відлік. Магнітом догори = завмер.           */
+function restLogic(dt,t){
+  if(!S.restOn) return;
+  // орієнтація кришки: знак гравітації на осі нормалі
+  const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
+  const nrm=S.grav[S.capAxis]/gl;
+  const flat=Math.abs(nrm)>.8 && S.stillT>.4;
+  const frozen = flat && (nrm*S.capSign < 0);   // перевернули = стоп
+  if(frozen!==S.restFrozen){
+    S.restFrozen=frozen;
+    $('rest').classList.toggle('frozen',frozen);
+    $('r_lbl').textContent = frozen?'ПАУЗА · магніт догори':'відпочинок';
+    beep(frozen?420:760,.1);
+  }
+  if(S.restFrozen) return;
+
+  const prev=S.restLeft;
+  S.restLeft-=dt;
+  if(prev>10 && S.restLeft<=10){ sfxReady(); say('Готуйся', true); $('rest').classList.add('go'); }
+  if(prev>3 && S.restLeft<=3){ beep(660,.08); }
+  if(prev>2 && S.restLeft<=2){ setTimeout(()=>beep(660,.08),0); }
+  if(prev>1 && S.restLeft<=1){ setTimeout(()=>beep(660,.08),0); }
+  if(S.restLeft<=0){ stopRest(true); }
+}
+function startRest(){
+  S.restOn=true; S.restLeft=CFG.rest; S.restFrozen=false;
+  $('rest').classList.add('on'); $('rest').classList.remove('frozen','go');
+  $('r_lbl').textContent='відпочинок';
+}
+function stopRest(done){
+  S.restOn=false; $('rest').classList.remove('on','frozen','go');
+  if(done){ sfxGo(); say('Старт', true); }
+}
+
+/* ══════════ ЗАВЕРШЕННЯ ПІДХОДУ ══════════ */
+function endSet(){
+  if(!S.reps.length){ toast('Підхід порожній'); beep(300,.12); return; }
+  const r=S.reps, n=r.length;
+  const clean=r.filter(x=>!x.warm), cn=clean.length||1;
+  const avg=clean.reduce((s,x)=>s+x.mcv,0)/cn;
+  const drop=S.base? Math.round((1-r[n-1].mcv/S.base)*100):0;
+  S.sets++;
+  sfxSet();
+  say(n+' повторень. Падіння '+Math.max(0,drop)+' відсотків', true);
+  toast('Підхід '+S.sets+': '+n+' повт · '+avg.toFixed(2)+' м/с · TUT '+Math.round(S.tut)+'с');
+  // скидаємо підхід
+  S.reps=[]; S.base=null; S.fatigued=false; S.tut=0; S.phase='idle'; S.vel=0; S.disp=0;
+  renderReps();
+  startRest();
+}
+
+/* ══════════ ЛАБОРАТОРІЯ ══════════
+   Мета: підбирати пороги не на око, а з реальних записів.        */
+const LAB={ pk:{}, rec:false, lbl:'', t0:0, dur:6, frames:[], takes:[], cd:0, btnCnt:0 };
+function peak(k,v,t){
+  const p=LAB.pk[k]||(LAB.pk[k]={v:0,t:0});
+  if(v>p.v || t-p.t>4){ p.v=v; p.t=t; }
+  return p.v;
+}
+function labSample(a,g,dt,t){
+  peak('jerk',S.jerk,t); peak('mot',S.motion,t);
+  peak('gyr',S.gyRate,t); peak('vel',Math.abs(S.vel),t);
+  peak('tilt',Math.abs(S.tiltSigned),t);
+  if(S.btn && !LAB.wasBtn) LAB.btnCnt++;
+  LAB.wasBtn=S.btn;
+
+  if(LAB.cd>0){                                  // відлік перед записом
+    const left=LAB.cd-t;
+    if(left<=0){ LAB.cd=0; LAB.rec=true; LAB.t0=t; LAB.frames=[]; beep(1200,.12); }
+    else { const n=Math.ceil(left); if(n!==LAB.cdShown){ LAB.cdShown=n; beep(700,.07); } }
+    return;
+  }
+  if(!LAB.rec) return;
+  LAB.frames.push([+(t-LAB.t0).toFixed(4), g[0],g[1],g[2], a[0],a[1],a[2], S.btn,
+                   +S.jerk.toFixed(3), +S.motion.toFixed(3), +S.gyRate.toFixed(1),
+                   +S.vel.toFixed(3), +S.tiltSigned.toFixed(2)]);
+  if(t-LAB.t0>=LAB.dur){
+    LAB.rec=false;
+    const f=LAB.frames, mx=(i)=>f.reduce((m,r)=>Math.max(m,Math.abs(r[i])),0);
+    const jerks=f.map(r=>r[8]);
+    // локальні піки ривка — скільки «ударів» у записі
+    let hits=0, last=-9;
+    jerks.forEach((v,i)=>{ if(v>0.25 && i-last>3 && v>=jerks[i-1]&&v>=(jerks[i+1]??0)){ hits++; last=i; } });
+    LAB.takes.push({ lbl:LAB.lbl, n:f.length, hz:Math.round(f.length/LAB.dur),
+      jerk:+mx(8).toFixed(2), mot:+mx(9).toFixed(2), gyr:+mx(10).toFixed(0),
+      vel:+mx(11).toFixed(2), tilt:+mx(12).toFixed(1),
+      btn:f.filter((r,i)=>r[7]&&!(f[i-1]&&f[i-1][7])).length, hits:hits, raw:f });
+    sfxSet(); say('Записано');
+    renderLab();
+  }
+}
+function labStart(){
+  if(LAB.rec||LAB.cd) return;
+  LAB.lbl=$('lab_lbl').value; LAB.cd=now()+3; LAB.cdShown=0;
+  $('lab_state').textContent='відлік…'; audioResume();
+}
+function renderLab(){
+  if(!LAB.takes.length){ $('lab_list').textContent='Записів поки немає.'; return; }
+  let s='зразок     ривок  рух   гіро  швидк крен  кнопк удари\n';
+  LAB.takes.forEach(k=>{
+    s+= k.lbl.padEnd(10)
+      + String(k.jerk).padStart(6) + String(k.mot).padStart(6)
+      + String(k.gyr).padStart(6)  + String(k.vel).padStart(6)
+      + String(k.tilt).padStart(6) + String(k.btn).padStart(6)
+      + String(k.hits).padStart(6) + '\n';
+  });
+  $('lab_list').textContent=s;
+  $('lab_state').textContent=LAB.takes.length+' записів';
+}
+function labAdvise(){
+  const by=l=>LAB.takes.filter(k=>k.lbl===l);
+  const noise=[].concat(by('спокій'),by('повтори'),by('ходьба'),by('удар'));
+  const taps =[].concat(by('тап1'),by('тап2'),by('тап3'));
+  const out=[];
+  if(!taps.length || !noise.length){
+    out.push('<div class="warnbox">Щоб порадити поріг тапа, потрібні щонайменше два записи: '
+      +'<b>«спокій»</b> (або «повтори»/«удар») і <b>«тап1»</b>. Запиши їх і тисни ще раз.</div>');
+  } else {
+    const nMax=Math.max(...noise.map(k=>k.jerk));
+    const tMin=Math.min(...taps.map(k=>k.jerk));
+    if(tMin<=nMax){
+      out.push('<div class="warnbox">Твій тап (<b>'+tMin.toFixed(2)+' g</b>) слабший або рівний шуму '
+        +'(<b>'+nMax.toFixed(2)+' g</b>). Порогом їх не розділити — стукай різкіше нігтем, '
+        +'або користуйся кнопкою на кришці, вона надійніша.</div>');
+    } else {
+      // Не геометрична середина: коли шум дуже тихий, вона садить поріг
+      // майже на шум і перше ж брязкання заліза стане «тапом».
+      // Беремо потрійний запас над шумом, але не вище 40% від тапа,
+      // і тримаємо в розумних межах 0.25…0.95 g.
+      const thr=clamp(Math.max(nMax*3, tMin*0.40), 0.25, 0.95);
+      const val=Math.round(clamp((1.1-thr)*100, 10, 90));
+      CFG.tap=val; $('oTap').value=val; saveCfg();
+      out.push('<div class="okbox">Поріг тапа виставлено на <b>'+val+'</b> '
+        +'(спрацьовує від <b>'+thr.toFixed(2)+' g</b>).<br>Шум доходив до '+nMax.toFixed(2)
+        +' g, твій найслабший тап — '+tMin.toFixed(2)+' g. Запас у обидва боки є.</div>');
+    }
+    // чи правильно порахувались множинні тапи
+    [['тап1',1],['тап2',2],['тап3',3]].forEach(([l,exp])=>{
+      by(l).forEach(k=>{ if(k.hits!==exp)
+        out.push('<div class="warnbox">У записі «'+l+'» бачу <b>'+k.hits+'</b> ударів замість '+exp
+          +'. Якщо більше — стукаєш із відскоком; якщо менше — надто м\'яко або надто швидко поспіль.</div>');
+      });
+    });
+  }
+  // мертва зона крену
+  const lvl=by('крен'), calm=by('спокій');
+  if(lvl.length&&calm.length){
+    const drift=Math.max(...calm.map(k=>k.tilt));
+    out.push('<div class="okbox">У спокої крен «плаває» на <b>'+drift.toFixed(1)+'°</b>. '
+      +'Мертву зону тримай не менше <b>'+Math.max(2,Math.ceil(drift*2))+'°</b>, інакше писатиме без причини.</div>');
+  }
+  // амплітуда повторів
+  const rp=by('повтори');
+  if(rp.length){
+    const v=Math.max(...rp.map(k=>k.vel));
+    out.push('<div class="okbox">Пікова швидкість у твоїх рухах — <b>'+v.toFixed(2)+' м/с</b>. '
+      +(v<0.2?'Це мало: рухай різкіше або зменш «Мін. амплітуду».':'Достатньо для впевненого підрахунку.')+'</div>');
+  }
+  $('lab_advice').innerHTML=out.join('');
+}
+function labCsv(){
+  if(!LAB.takes.length){ toast('Немає записів'); return; }
+  let s='label,take,t_s,gx,gy,gz,ax,ay,az,button,jerk_g,motion_g,gyro_dps,vel_ms,tilt_deg\n';
+  LAB.takes.forEach((k,ti)=>k.raw.forEach(r=>{ s+=k.lbl+','+(ti+1)+','+r.join(',')+'\n'; }));
+  shareCsv(s,'ironcap_lab_');
+}
+
+/* ══════════ ГРАФІКИ ══════════ */
+const BUF=260;
+const buf={ax:[],ay:[],az:[],gx:[],gy:[],gz:[],av:[],vv:[],tl:[],mk:[],jk:[]};
+function push(k,v){ const b=buf[k]; b.push(v); if(b.length>BUF) b.shift(); }
+function pushCharts(){
+  push('ax',S.lin[0]); push('ay',S.lin[1]); push('az',S.lin[2]);
+  push('gx',S.gyRate); push('gy',0); push('gz',0);
+  push('av',S.aV); push('vv',S.vel); push('tl',S.tiltSigned); push('jk',S.jerk);
+  push('mk', S.lastRepT && now()-S.lastRepT<.25 ? 1:0);
+}
+function drawChart(cv, series, opts){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const w=cv.clientWidth, h=cv.clientHeight;
+  if(!w||!h) return;
+  if(cv.width!==w*dpr||cv.height!==h*dpr){ cv.width=w*dpr; cv.height=h*dpr; }
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  let mx=opts&&opts.fixed?opts.fixed:0;
+  if(!mx){ series.forEach(s=>s.d.forEach(v=>{ const a=Math.abs(v); if(a>mx)mx=a; })); mx=mx||1; mx*=1.15; }
+  // нуль
+  c.strokeStyle='#1a2230'; c.lineWidth=1;
+  c.beginPath(); c.moveTo(0,h/2); c.lineTo(w,h/2); c.stroke();
+  // маркери повторів
+  if(opts&&opts.marks){
+    c.fillStyle='rgba(47,208,122,.18)';
+    buf.mk.forEach((m,i)=>{ if(m){ const x=i/(BUF-1)*w; c.fillRect(x-2,0,4,h); } });
+  }
+  series.forEach(s=>{
+    const d=s.d; if(d.length<2) return;
+    c.strokeStyle=s.c; c.lineWidth=s.w||1.6; c.lineJoin='round'; c.beginPath();
+    const off=BUF-d.length;
+    for(let i=0;i<d.length;i++){
+      const x=(i+off)/(BUF-1)*w, y=h/2-clamp(d[i]/mx,-1,1)*(h/2-3);
+      i?c.lineTo(x,y):c.moveTo(x,y);
+    }
+    c.stroke();
+  });
+}
+function drawLevel(){
+  const cv=$('lvlCv'); const dpr=Math.min(2,window.devicePixelRatio||1);
+  const w=cv.clientWidth,h=cv.clientHeight; if(!w||!h) return;
+  if(cv.width!==w*dpr||cv.height!==h*dpr){cv.width=w*dpr;cv.height=h*dpr;}
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, R=Math.min(w*.42,h*.44);
+  const d=S.zRef? clamp(S.tiltSigned,-25,25):0;
+  const ok=Math.abs(S.tiltSigned)<=CFG.dead;
+  // зона норми
+  const dz=CFG.dead/25;
+  c.fillStyle='rgba(47,208,122,.10)';
+  c.fillRect(cx-R*dz*1.2, cy-26, R*dz*2.4, 52);
+  // напрямні
+  c.strokeStyle='#1e2734'; c.lineWidth=1;
+  [-1,-.5,.5,1].forEach(f=>{ c.beginPath(); c.moveTo(cx+R*f,cy-16); c.lineTo(cx+R*f,cy+16); c.stroke(); });
+  // сам «гриф»
+  const ang = d*Math.PI/180*1.9;
+  c.save(); c.translate(cx,cy); c.rotate(ang);
+  const grd=c.createLinearGradient(-R,0,R,0);
+  const col = ok?'#2fd07a':(Math.abs(S.tiltSigned)>CFG.dead*2?'#ff4d5e':'#ffb020');
+  grd.addColorStop(0,col); grd.addColorStop(1,col);
+  c.strokeStyle=grd; c.lineWidth=9; c.lineCap='round';
+  c.beginPath(); c.moveTo(-R,0); c.lineTo(R,0); c.stroke();
+  c.fillStyle=col;
+  c.beginPath(); c.arc(-R,0,14,0,7); c.fill();
+  c.beginPath(); c.arc(R,0,14,0,7); c.fill();
+  c.restore();
+}
+
+/* ══════════ РЕНДЕР ══════════ */
+function renderReps(){
+  const html=S.reps.map(r=>{
+    if(r.warm) return '<div class="rep" style="opacity:.42">~<small>прогрів</small></div>';
+    const cls = r.fast?'rep bad':(r.pct<100-CFG.fat?'rep tired':'rep');
+    return '<div class="'+cls+'">'+r.pct+'<small>#'+r.n+'</small></div>';
+  }).join('');
+  $('c_list').innerHTML=html; $('v_list').innerHTML=html;
+}
+const PH={idle:'чекаю рух',up:'вгору ↑',down:'вниз ↓',upret:'повертаю ↑',downret:'повертаю ↓'};
+function ui(){
+  // топ
+  $('chHz').textContent = S.hzEma? S.hzEma.toFixed(0)+' Гц':'— Гц';
+  const okp = S.pkTotal? Math.round((S.pkTotal-S.pkSkip)/S.pkTotal*100):0;
+  $('chOk').textContent = S.pkTotal? okp+'%':'—%';
+  $('chOk').style.color = okp>90?'#2fd07a':okp>60?'#ffb020':'#ff4d5e';
+
+  if(S.mode===0){
+    $('rawA').textContent = S.lin.map(v=>v.toFixed(0).padStart(5)).join(' ');
+    $('rawG').textContent = S.gyRate.toFixed(1)+' °/с';
+    $('d_av').textContent = S.aV.toFixed(2);
+    $('d_vv').textContent = S.vel.toFixed(2);
+    $('d_tilt').textContent = (S.zRef? S.tiltSigned.toFixed(1):'—')+'°';
+    drawChart($('cvA'),[{d:buf.ax,c:'#ff6b6b'},{d:buf.ay,c:'#2fd07a'},{d:buf.az,c:'#4dabf7'}]);
+    drawChart($('cvG'),[{d:buf.gx,c:'#ffd43b'}]);
+    drawChart($('cvV'),[{d:buf.av,c:'#868e96',w:1.2},{d:buf.vv,c:'#4dabf7',w:2}],{marks:1});
+    if(CFG.diag) renderScout();
+  }
+  if(S.mode===1){
+    $('c_reps').textContent=S.reps.length;
+    $('c_phase').textContent=PH[S.phase]||S.phase;
+    $('c_state').textContent = S.base? 'база '+S.base.toFixed(2)+' м/с':'калібрую базу';
+    $('c_tut').innerHTML=Math.round(S.tut)+'<small style="font-size:12px">с</small>';
+    const last=S.reps[S.reps.length-1];
+    $('c_ecc').textContent = last? last.ecc.toFixed(1)+'с':'—';
+    $('c_ecc').style.color = last&&last.fast?'#ff6b6b':'#e8edf5';
+    $('c_rom').textContent = last? Math.round(last.rom)+'см':'—';
+    const prog=clamp(Math.abs(S.disp)*100/Math.max(1,CFG.rom),0,1);
+    $('c_bar').style.width=(prog*100)+'%';
+    $('c_bar').style.background = S.phase==='idle'?'#2f7cf6':'#2fd07a';
+    drawChart($('cvC'),[{d:buf.vv,c:'#4dabf7',w:2}],{marks:1});
+  }
+  if(S.mode===2){
+    const has=!!S.zRef;
+    $('l_deg').innerHTML = has? (Math.abs(S.tiltSigned)<.5?'0':S.tiltSigned.toFixed(1))+'<small>°</small>' : '—';
+    $('l_deg').style.color = !has?'#4a5768':(Math.abs(S.tiltSigned)<=CFG.dead?'#2fd07a':Math.abs(S.tiltSigned)>CFG.dead*2?'#ff4d5e':'#ffb020');
+    $('l_max').textContent=S.lMax.toFixed(1)+'°';
+    $('l_pct').textContent=S.lTot>0? Math.round(S.lIn/S.lTot*100)+'%':'—';
+    $('l_side').textContent = !has?'—':(Math.abs(S.tiltSigned)<=CFG.dead?'рівно':(S.tiltSigned>0?'правий ↓':'лівий ↓'));
+    drawLevel();
+    drawChart($('cvL'),[{d:buf.tl,c:'#ffd43b',w:2}],{fixed:Math.max(10,CFG.dead*3)});
+  }
+  if(S.mode===3){
+    const last=S.reps[S.reps.length-1];
+    $('v_pct').innerHTML = last? last.pct+'<small style="font-size:26px">%</small>':'—';
+    $('v_pct').style.color = !last?'#e8edf5':(last.pct<100-CFG.fat?'#ff4d5e':last.pct<100-CFG.fat/2?'#ffb020':'#2fd07a');
+    $('v_mcv').textContent = last? last.mcv.toFixed(2):'—';
+    $('v_base').textContent = S.base? S.base.toFixed(2):'—';
+    $('v_reps').textContent = S.reps.length;
+    $('v_state').textContent = S.fatigued?'ВИСНАЖЕННЯ':(S.base?'стежу':'калібрую');
+    $('v_state').style.color = S.fatigued?'#ff4d5e':'#6c7d95';
+    $('v_sub').textContent = S.fatigued? 'став вагу':'від базового';
+    const p=last?clamp(last.pct/100,0,1):0;
+    $('v_bar').style.width=(p*100)+'%';
+    $('v_bar').style.background = p<(100-CFG.fat)/100?'#ff4d5e':'#2fd07a';
+    drawChart($('cvVb'),[{d:S.reps.map(r=>r.pct-100),c:'#4dabf7',w:2.4}],{fixed:60});
+  }
+  if(S.mode===4){
+    const P=LAB.pk, gv=k=>(P[k]?P[k].v:0);
+    const thr=1.1-CFG.tap/100;
+    $('lab_hz').textContent = S.hzEma? S.hzEma.toFixed(0)+' Гц':'—';
+    $('lab_thr').textContent= thr.toFixed(2);
+    $('pk_jerk').textContent= gv('jerk').toFixed(2);
+    $('pk_jerk').style.color= gv('jerk')>thr?'#2fd07a':'#e8edf5';
+    $('pk_mot').textContent = gv('mot').toFixed(2);
+    $('pk_gyr').textContent = gv('gyr').toFixed(0);
+    $('pk_vel').textContent = gv('vel').toFixed(2);
+    $('pk_tilt').textContent= gv('tilt').toFixed(1);
+    $('pk_btn').textContent = LAB.btnCnt;
+    $('pkb_jerk').style.width=clamp(gv('jerk')/1.5,0,1)*100+'%';
+    $('pkb_mot').style.width =clamp(gv('mot')/1.5,0,1)*100+'%';
+    $('pkb_gyr').style.width =clamp(gv('gyr')/600,0,1)*100+'%';
+    if(LAB.rec) $('lab_state').textContent='ЗАПИС '+(LAB.dur-(now()-LAB.t0)).toFixed(1)+' с';
+    else if(LAB.cd) $('lab_state').textContent='відлік '+Math.ceil(LAB.cd-now());
+    drawChart($('cvLab'),[{d:buf.jk,c:'#ff6b6b',w:1.8},{d:buf.av,c:'#4dabf7',w:1.2}],{fixed:1.2});
+  }
+  // сесія
+  const sec=S.running?Math.max(0,Math.floor(now()-S.t0)):0;
+  $('s_clock').textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+  $('s_sets').textContent=S.sets;
+  $('s_reps').textContent=S.allReps;
+  $('s_tut').textContent=Math.round(S.allTut)+'с';
+  // відпочинок
+  if(S.restOn){
+    const l=Math.max(0,Math.ceil(S.restLeft));
+    $('r_t').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');
+  }
+  requestAnimationFrame(ui);
+}
+function renderScout(){
+  const ks=Object.keys(scoutSeen);
+  if(!ks.length){ $('scout').textContent='—'; return; }
+  let out='розмір  пакетів  кадрів  байт[1]  байт[0]\n';
+  ks.sort().forEach(k=>{
+    const r=scoutSeen[k];
+    const b1=Object.entries(r.b1).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([v,n])=>v+'×'+n).join(' ');
+    const h0=Object.entries(r.head).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([v,n])=>v+'×'+n).join(' ');
+    out+=k.replace('len','').padStart(5)+String(r.n).padStart(9)+String(r.frames).padStart(8)+'  '+b1.padEnd(16)+h0+'\n';
+  });
+  out+='\nмоторність '+S.motion.toFixed(3)+' g · ривок '+S.jerk.toFixed(2)+' g'
+     +'\nLSB на 1g = '+S.gn.toFixed(0)+'  (паспорт 2048 — звірка)'
+     +'\nкнопка: '+(S.btn?'НАТИСНУТА':'відпущена')
+     +'\nвісь кришки: '+['X','Y','Z'][S.capAxis]+' знак '+S.capSign
+     +'\nгіро-зсув '+S.gyBias.map(v=>v.toFixed(0)).join(' ')+' · швидк '+S.gyRate.toFixed(1)+' °/с';
+  $('scout').textContent=out;
+}
+
+/* ══════════ РЕЖИМИ / UI ══════════ */
+function setMode(m){
+  S.mode=m;
+  [...$('tabs').children].forEach(t=>t.classList.toggle('act',+t.dataset.m===m));
+  [0,1,2,3,4].forEach(i=>$('p'+i).classList.toggle('hide',i!==m));
+  if(m!==2) toneOff();
+  const names=['Дані','Лічильник','Рівень','Швидкість','Лабораторія'];
+  if(m>0) say('Режим '+names[m], true);
+  toast('Режим: '+names[m]);
+}
+
+/* ══════════ WAKE LOCK ══════════ */
+let wl=null;
+async function wakeLock(){
+  if(!CFG.wake || !navigator.wakeLock) return;
+  try{ wl=await navigator.wakeLock.request('screen');
+       wl.addEventListener('release',()=>{wl=null;}); }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') wakeLock(); });
+
+/* ══════════ ДЕМО ══════════ */
+let demoT=null, dT=0;
+function demo(on){
+  if(demoT){ clearInterval(demoT); demoT=null; }
+  if(!on) return;
+  dT=0; S.running=true; S.t0=now(); setStat('ДЕМО','warn');
+  const t0=now();
+  demoT=setInterval(()=>{
+    dT=now()-t0;                 // реальний годинник, а не крок таймера
+    const gn=2048;
+    const f = S.mode===2? 0 : .40;                       // у режимі «Рівень» лише хитання
+    const R = .55;
+    const aV = (R/2)*Math.pow(2*Math.PI*f,2)*Math.cos(2*Math.PI*f*dT)/G_MS2*gn;
+    const tilt = (S.mode===2? 9:2)*Math.sin(2*Math.PI*.09*dT)*Math.PI/180;
+    const nz=()=> (Math.random()-.5)*26;
+    const az = gn*Math.cos(tilt)+aV+nz();
+    const ax = gn*Math.sin(tilt)+nz();
+    const ay = nz();
+    const b=new DataView(new ArrayBuffer(12));
+    // порядок як у справжньому кадрі: спершу гіро, потім аксель
+    b.setInt16(0,(nz()/3)|0,true); b.setInt16(2,(nz()/3)|0,true); b.setInt16(4,(nz()/3)|0,true);
+    b.setInt16(6,ax|0,true); b.setInt16(8,ay|0,true); b.setInt16(10,az|0,true);
+    S.pkTotal++; frame(b,0,0);
+  },1000/18);
+}
+
+/* ══════════ CSV ══════════ */
+const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform||''));
+function csv(){
+  let s='epoch_ms,iso_time,a_vert_g,vel_ms,tilt_deg,rep_idx\n';
+  for(const r of S.log) s+=r[0]+','+new Date(r[0]).toISOString()+','+r[1]+','+r[2]+','+r[3]+','+r[4]+'\n';
+  return s;
+}
+async function exportCsv(){
+  if(!S.log.length){ toast('Немає даних'); return; }
+  shareCsv(csv(),'ironcap_');
+}
+async function shareCsv(text,prefix){
+  const name=prefix+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  let f=null; try{ f=new File([text],name,{type:'text/csv'}); }catch(e){}
+  if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
+    try{ await navigator.share({files:[f],title:name}); return; }catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  if(!IS_IOS){
+    try{ const u=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+      const a=document.createElement('a'); a.href=u; a.download=name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(u),4000); return; }catch(e){}
+  }
+  $('expT').value=text; $('exp').classList.add('on');
+}
+
+/* ══════════ ПРИВ'ЯЗКА UI ══════════ */
+$('tabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if(t){ audioResume(); setMode(+t.dataset.m); }});
+$('bConn').onclick = ()=> S.connected? disconnect() : connect();
+$('bSet').onclick  = ()=>{ audioResume(); endSet(); };
+$('bZero').onclick = ()=>{ audioResume(); setZero(); };
+$('bCfg').onclick  = ()=> $('cfg').classList.add('on');
+$('cfgX').onclick  = ()=> $('cfg').classList.remove('on');
+$('cfg').onclick   = e=>{ if(e.target===$('cfg')) $('cfg').classList.remove('on'); };
+$('expX').onclick  = ()=> $('exp').classList.remove('on');
+$('r_skip').onclick= ()=> stopRest(false);
+$('bCsv').onclick  = exportCsv;
+$('lab_rec').onclick = labStart;
+$('lab_calc').onclick= labAdvise;
+$('lab_csv').onclick = labCsv;
+$('lab_clr').onclick = ()=>{ LAB.takes=[]; LAB.btnCnt=0; LAB.pk={};
+  $('lab_advice').innerHTML=''; renderLab(); toast('Лабораторію очищено'); };
+$('expCopy').onclick= async()=>{ const t=$('expT'); t.select();
+  try{ await navigator.clipboard.writeText(t.value); toast('Скопійовано'); }
+  catch(e){ document.execCommand('copy'); toast('Скопійовано'); } };
+$('bReset').onclick= ()=>{ S.reps=[];S.base=null;S.fatigued=false;S.tut=0;S.sets=0;S.allReps=0;
+  S.allTut=0;S.log=[];S.t0=now();S.lMax=0;S.lIn=0;S.lTot=0;S.zRef=null;renderReps();toast('Сесію скинуто'); };
+
+function bindSw(id,key,after){
+  const el=$(id); el.classList.toggle('on',!!CFG[key]);
+  el.onclick=()=>{ CFG[key]=!CFG[key]; el.classList.toggle('on',CFG[key]); saveCfg(); after&&after(); };
+}
+function bindNum(id,key,after){
+  const el=$(id); el.value=CFG[key];
+  el.onchange=()=>{ const v=parseFloat(el.value); if(!isNaN(v)){CFG[key]=v;saveCfg();after&&after();} };
+}
+bindSw('oWake','wake',wakeLock);
+bindSw('oFlip','flip');
+bindSw('oDemo','demo',()=>demo(CFG.demo));
+bindSw('oDiag','diag',()=>{ if(!CFG.diag) $('scout').textContent='—'; });
+bindNum('oRest','rest'); bindNum('oDead','dead'); bindNum('oEcc','ecc');
+bindNum('oFat','fat'); bindNum('oRom','rom');
+$('oAudio').value=CFG.audio;
+$('oAudio').onchange=()=>{ CFG.audio=$('oAudio').value; saveCfg(); if(CFG.audio!=='voice')try{speechSynthesis.cancel()}catch(e){} if(CFG.audio==='off')toneOff(); audioResume(); beep(880,.08); };
+$('oVol').value=CFG.vol;
+$('oVol').oninput=()=>{ CFG.vol=+$('oVol').value; setVol(); };
+$('oVol').onchange=()=>{ saveCfg(); audioResume(); beep(880,.1); };
+$('oTap').value=CFG.tap;
+$('oTap').onchange=()=>{ CFG.tap=+$('oTap').value; saveCfg(); };
+
+document.addEventListener('touchstart',audioResume,{passive:true,once:false});
+document.addEventListener('click',audioResume,{once:false});
+
+if(CFG.demo) setTimeout(()=>demo(true),300);
+setMode(0);
+renderReps();
+ui();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>

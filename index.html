@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Triki Cadence</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --line:#30363d; --txt:#e6edf3; --muted:#8b949e;
+    --z0:#6e7681; --z1:#3b82f6; --z2:#22c55e; --z3:#f59e0b; --z4:#ef4444; --accent:#58a6ff; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%; overscroll-behavior:none;}
+  body{background:var(--bg); color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:env(safe-area-inset-top) 14px calc(env(safe-area-inset-bottom) + 14px);
+    display:flex; flex-direction:column; gap:10px; min-height:100%; user-select:none; -webkit-user-select:none;}
+  header{display:flex; align-items:center; justify-content:space-between; padding-top:10px;}
+  .brand{font-weight:700; font-size:17px; letter-spacing:.5px;}
+  .status{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted);}
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--bad); transition:.3s;}
+  .dot.on{background:var(--ok);} .dot.wait{background:var(--warn);}
+
+  .gauge{background:var(--card); border:1px solid var(--line); border-radius:22px; padding:18px 18px 16px; text-align:center; transition:box-shadow .4s; position:relative;}
+  .conf{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:3px 10px; border-radius:20px; background:#ffffff10; color:var(--muted);}
+  .conf .cd{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+  .zone-label{font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-top:8px;}
+  .rpm{font-size:23vw; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; margin:0;}
+  @media(min-width:520px){ .rpm{font-size:125px;} }
+  .rpm.paused{opacity:.35;}
+  .rpm-unit{font-size:14px; color:var(--muted); letter-spacing:3px; text-transform:uppercase;}
+  .pausetag{position:absolute; top:14px; left:14px; font-size:12px; font-weight:700; color:var(--warn); display:none;}
+  .bar{position:relative; height:9px; border-radius:6px; background:#21262d; margin-top:12px; overflow:hidden;}
+  .bar > .fill{height:100%; width:0%; border-radius:6px; transition:width .25s, background .4s;}
+  .bar > .tick{position:absolute; top:-3px; width:2px; height:15px; background:#fff; opacity:.85; display:none;}
+  .diag{font-size:12px; text-align:center; min-height:15px; color:var(--muted);}
+  .diag.warn{color:var(--warn);} .diag.bad{color:var(--bad);}
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 4px; text-align:center;}
+  .stat .v{font-size:21px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .stat .k{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  .target{display:flex; align-items:center; justify-content:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:9px;}
+  .target .lbl{font-size:13px; color:var(--muted);}
+  .target .val{font-size:20px; font-weight:700; min-width:52px; text-align:center; font-variant-numeric:tabular-nums;}
+  .target button{padding:8px 14px; font-size:18px; border-radius:10px;}
+  .target .beep.on{background:var(--accent); border-color:var(--accent);}
+
+  .chartwrap{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:10px 8px 4px;}
+  canvas{width:100%; display:block;}
+  #chart{height:110px;}
+  .chartwrap .cap{font-size:11px; color:var(--muted); padding:2px 4px 6px;}
+
+  .controls{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:auto;}
+  button{appearance:none; border:1px solid var(--line); background:#21262d; color:var(--txt); font-size:15px; font-weight:600; padding:14px; border-radius:13px; cursor:pointer; transition:.15s; touch-action:manipulation;}
+  button:active{transform:scale(.97);}
+  button.primary{grid-column:1 / -1; background:var(--accent); border-color:var(--accent); color:#08131f; font-size:18px;}
+  button.primary.stop{background:var(--bad); border-color:var(--bad); color:#fff;}
+  button:disabled{opacity:.4;}
+  .mini{font-size:13px; padding:12px 6px;}
+  button.act{background:var(--warn); border-color:var(--warn); color:#08131f;}
+  .hint{font-size:12px; color:var(--muted); text-align:center; line-height:1.5;}
+
+  .modal{position:fixed; inset:0; background:#000b; display:none; align-items:flex-end; z-index:50;}
+  .modal.open{display:flex;}
+  .sheet{background:var(--card); border-top-left-radius:20px; border-top-right-radius:20px; width:100%; max-height:88vh; overflow:auto; padding:16px 16px calc(env(safe-area-inset-bottom) + 16px); border-top:1px solid var(--line);}
+  .sheet .shead{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; position:sticky; top:0; background:var(--card); padding-bottom:6px;}
+  .sheet h3{margin:0; font-size:17px;}
+  .trust{text-align:center; padding:14px; border-radius:14px; margin-bottom:12px; border:1px solid var(--line);}
+  .trust .big{font-size:40px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;}
+  .trust .lb{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
+  .trust .note{font-size:12px; margin-top:8px;}
+  .sgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px;}
+  .sgrid .c{background:#ffffff08; border:1px solid var(--line); border-radius:12px; padding:10px 6px; text-align:center;}
+  .sgrid .c .v{font-size:19px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .sgrid .c .k{font-size:10px; color:var(--muted); margin-top:2px;}
+  .secttl{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:14px 2px 8px;}
+  .zrow{display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:12px;}
+  .zrow .zn{width:78px; color:var(--muted);}
+  .zrow .zbar{flex:1; height:14px; border-radius:5px; background:#ffffff10; overflow:hidden;}
+  .zrow .zbar > div{height:100%; border-radius:5px;}
+  .zrow .zt{width:44px; text-align:right; font-variant-numeric:tabular-nums;}
+  table.laps{width:100%; border-collapse:collapse; font-size:13px;}
+  table.laps th,table.laps td{padding:7px 4px; text-align:right; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums;}
+  table.laps th:first-child,table.laps td:first-child{text-align:left;}
+  table.laps th{color:var(--muted); font-weight:600; font-size:11px;}
+  .ride{border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px;}
+  .ride .top{display:flex; justify-content:space-between; align-items:baseline;}
+  .ride .date{font-size:13px; color:var(--muted);}
+  .ride .big{font-size:16px; font-weight:700;}
+  .ride .met{font-size:12px; color:var(--muted); margin-top:5px; font-variant-numeric:tabular-nums;}
+  .ride .acts{display:flex; gap:8px; margin-top:9px;}
+  .ride .acts button{padding:8px 10px; font-size:12px; flex:1;}
+  .empty{color:var(--muted); text-align:center; padding:24px 0; font-size:14px;}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">🥏 TRIKI · каденс</div>
+    <div class="status"><span id="dot" class="dot"></span><span id="stxt">не підключено</span></div>
+  </header>
+
+  <div id="gauge" class="gauge">
+    <div id="pausetag" class="pausetag">⏸ ПАУЗА</div>
+    <div id="conf" class="conf"><span class="cd"></span><span id="conftxt">—</span></div>
+    <div id="zone" class="zone-label">—</div>
+    <div id="rpm" class="rpm">0</div>
+    <div class="rpm-unit">об/хв</div>
+    <div class="bar"><div id="fill" class="fill"></div><div id="tick" class="tick"></div></div>
+  </div>
+  <div class="diag" id="diag"></div>
+
+  <div class="stats">
+    <div class="stat"><div class="v" id="avg">0</div><div class="k">середній</div></div>
+    <div class="stat"><div class="v" id="max">0</div><div class="k">макс</div></div>
+    <div class="stat"><div class="v" id="revs">0</div><div class="k">оберти</div></div>
+    <div class="stat"><div class="v" id="time">0:00</div><div class="k">час у русі</div></div>
+  </div>
+
+  <div class="target">
+    <span class="lbl">🎯 Ціль</span>
+    <button id="tmin">−</button><span class="val" id="tval">—</span><button id="tplus">+</button>
+    <button id="beep" class="beep">🔔</button>
+  </div>
+
+  <div class="chartwrap"><canvas id="chart"></canvas><div class="cap">каденс за останні 60 c</div></div>
+
+  <div class="controls">
+    <button id="primary" class="primary">Підключити Triki</button>
+    <button id="pause" class="mini" disabled>⏸ Пауза</button>
+    <button id="lap" class="mini" disabled>🚩 Коло</button>
+    <button id="hist" class="mini">Історія</button>
+    <button id="wake" class="mini">🔆 Авто</button>
+  </div>
+  <div class="hint">Відкрий у <b>Bluefy</b>. Прикріпи Triki до шатуна, розбуди рухом → «Підключити». Торкнись цифри, щоб перекалібрувати вручну.</div>
+
+  <div class="modal" id="modal"><div class="sheet">
+    <div class="shead"><h3 id="mtitle">Історія заїздів</h3><button class="mini" id="mclose">Закрити</button></div>
+    <div id="mbody"></div>
+  </div></div>
+
+<script>
+"use strict";
+const NUS="6e400001-b5a3-f393-e0a9-e50e24dcca9e",C_WR="6e400002-b5a3-f393-e0a9-e50e24dcca9e",C_NTF="6e400003-b5a3-f393-e0a9-e50e24dcca9e",C_LED="6e400004-b5a3-f393-e0a9-e50e24dcca9e";
+const INIT1=new Uint8Array([0x01,0x00]),INIT2=new Uint8Array([0x20,0x10,0x00,0xD0,0x07,0x34,0x00,0x03]);
+const TAU_DC=1.5,TAU_VAR=2.0,TAU_RPM=0.5,AMP_MIN=180,AMP_GOOD=550,RPM_MAX=280,PLANE_CONFIRM=32,AUTOPAUSE_S=3.5,GYRO_MIN_RPM=12,GYRO_SPIN=400,AMP_STILL=120;
+const HIST_KEY="triki_history";
+const ZONES=[[50,"var(--z0)","#6e7681","дуже легко"],[70,"var(--z1)","#3b82f6","легко"],[90,"var(--z2)","#22c55e","оптимально"],[110,"var(--z3)","#f59e0b","швидко"],[999,"var(--z4)","#ef4444","спринт"]];
+
+const S={};
+function initState(){Object.assign(S,{
+  dev:null,ntf:null,wr:null,battChar:null,battTimer:null,
+  wantConnected:false,connecting:false,reconnectDelay:1000,selftest:false,
+  // signal
+  dcMean:[0,0,0],axMean:[0,0,0],axVar:[0,0,0],dcInit:false,A:-1,B:-1,planeConfirm:0,prevAng:null,lastT:null,
+  gyBias:[0,0,0],gyRate:0,gyroScale:null,rpmAccelEma:0,rpmAccelSlow:0,rpmGyro:0,rpm:0,source:"—",harmonic:0,
+  confidence:0,amp:0,moving:false,
+  // quality
+  hzEst:17,gapCount:0,validPk:0,totalPk:0,lastPkT:0,
+  // session
+  running:false,hasData:false,paused:false,autoPaused:false,lastMotionT:0,
+  revs:0,maxRpm:0,avgSum:0,movTime:0,totalTime:0,
+  sumConfMov:0,agrSum:0,agrTime:0,hzSum:0,hzTime:0,
+  series:[],lapMarks:[0],
+  target:null,beepOn:false,audioCtx:null,lastBeep:0,
+  batt:null
+});}
+initState();
+S.wakeMode=0; S.wakeLock=null;
+const $=id=>document.getElementById(id);
+const now=()=>performance.now()/1000;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+// ================= BLE =================
+$("primary").onclick=async()=>{
+  if(S.wantConnected){ finish(); return; }
+  if(!navigator.bluetooth){ alert("Web Bluetooth недоступний. Відкрий сторінку в браузері Bluefy."); return; }
+  try{
+    setStatus("wait","пошук…");
+    const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[NUS,"battery_service"]});
+    S.dev=dev; dev.addEventListener("gattserverdisconnected",onDisconnect);
+    S.wantConnected=true; S.reconnectDelay=1000;
+    startSession(); updateButtons(); unlockAudio(); requestWake();
+    await setup(); runSelfTest();
+  }catch(err){ S.wantConnected=false; setStatus("off","не підключено"); updateButtons();
+    if(err&&err.name!=="NotFoundError") alert("Помилка: "+err.message); }
+};
+async function setup(){
+  S.connecting=true; setStatus("wait","підключення…");
+  const server=await S.dev.gatt.connect();
+  const svc=await server.getPrimaryService(NUS);
+  S.ntf=await svc.getCharacteristic(C_NTF); S.wr=await svc.getCharacteristic(C_WR);
+  await S.ntf.startNotifications();
+  S.ntf.addEventListener("characteristicvaluechanged",e=>onPacket(e.target.value));
+  try{ const led=await svc.getCharacteristic(C_LED); await led.writeValue(new Uint8Array([0])); }catch(e){}
+  try{ const bs=await server.getPrimaryService("battery_service"); S.battChar=await bs.getCharacteristic("battery_level"); await readBattery(); startBatteryPoll(); }catch(e){}
+  await writeSafe(S.wr,INIT1); await sleep(120); await writeSafe(S.wr,INIT2);
+  S.connecting=false; S.reconnectDelay=1000; setStatus("on","підключено"); updateButtons();
+}
+async function writeSafe(ch,d){ try{await ch.writeValueWithoutResponse(d);}catch(e){try{await ch.writeValue(d);}catch(e2){}} }
+function onDisconnect(){ if(S.battTimer){clearInterval(S.battTimer);S.battTimer=null;} if(S.wantConnected) scheduleReconnect(); else {setStatus("off","розʼєднано"); updateButtons();} }
+async function scheduleReconnect(){ setStatus("wait","перепідключення…"); await sleep(S.reconnectDelay); if(!S.wantConnected)return;
+  try{ await setup(); }catch(e){ S.reconnectDelay=Math.min(5000,S.reconnectDelay+1000); scheduleReconnect(); } }
+async function readBattery(){ try{const v=await S.battChar.readValue(); S.batt=v.getUint8(0);}catch(e){} }
+function startBatteryPoll(){ if(S.battTimer)clearInterval(S.battTimer); S.battTimer=setInterval(readBattery,60000); }
+
+// самотест: 2с збору → перевіряємо валідність, частоту, живі акс+гіро
+let stPk=0,stValid=0,stGyroLive=false,stAccLive=false;
+function runSelfTest(){ S.selftest=true; stPk=0;stValid=0;stGyroLive=false;stAccLive=false; setDiag("самоперевірка сенсора…","");
+  setTimeout(()=>{ S.selftest=false;
+    if(stPk<3){ setDiag("⚠ немає даних — Triki заснув? Потряси його","warn"); return; }
+    const vr=stValid/stPk;
+    if(vr<0.6){ setDiag("⚠ багато битих пакетів — тримайся ближче до телефону","warn"); return; }
+    if(!stAccLive){ setDiag("⚠ акселерометр мовчить — перевір сенсор","bad"); return; }
+    setDiag("сенсор ОК"+(stGyroLive?" · гіроскоп ✓":""),"");
+  },2200);
+}
+
+// ================= Пакет =================
+function onPacket(dv){
+  S.totalPk++; if(S.selftest)stPk++;
+  if(dv.byteLength<16) return;
+  if(dv.getUint8(0)!==0x22||dv.getUint8(1)!==0x00||dv.getUint8(14)!==0x22||dv.getUint8(15)!==0x00) return;
+  S.validPk++; if(S.selftest)stValid++;
+  const ax=dv.getInt16(2,true),ay=dv.getInt16(4,true),az=dv.getInt16(6,true);
+  const gx=dv.getInt16(8,true),gy=dv.getInt16(10,true),gz=dv.getInt16(12,true);
+  if(S.selftest){ if(Math.abs(ax)+Math.abs(ay)+Math.abs(az)>50)stAccLive=true; if(Math.abs(gx)+Math.abs(gy)+Math.abs(gz)>50)stGyroLive=true; }
+  const t=now();
+  // оцінка частоти + пропуски
+  if(S.lastPkT){ const d=t-S.lastPkT; if(d>0){ S.hzEst=0.9*S.hzEst+0.1*(1/d); if(d>0.4)S.gapCount++; } }
+  S.lastPkT=t;
+  feed(t,[ax,ay,az],[gx,gy,gz]);
+}
+
+// ================= Алгоритм + самоперевірка =================
+function selectPlane(){
+  const o=[0,1,2].sort((x,y)=>S.axVar[y]-S.axVar[x]);
+  if(S.A<0){ S.A=o[0]; S.B=o[1]; return; }
+  const want=new Set([o[0],o[1]]), cur=new Set([S.A,S.B]);
+  const same=[...cur].every(x=>want.has(x));
+  if(same){ S.planeConfirm=0; return; }
+  if(S.axVar[o[1]]>S.axVar[o[2]]*1.3) S.planeConfirm++; else S.planeConfirm=0;
+  if(S.planeConfirm>PLANE_CONFIRM){ S.A=o[0]; S.B=o[1]; S.prevAng=null; S.planeConfirm=0; flash("осі перекалібровано"); }
+}
+let flashUntil=0,flashMsg="";
+function flash(m){ flashMsg=m; flashUntil=now()+2.5; }
+
+function feed(t,acc,gyr){
+  const dt=S.lastT==null?0:t-S.lastT; S.lastT=t;
+  const gd=dt>0&&dt<1.0;
+  const aDC=gd?1-Math.exp(-dt/TAU_DC):0.05, aV=gd?1-Math.exp(-dt/TAU_VAR):0.05, aR=gd?1-Math.exp(-dt/TAU_RPM):0.2;
+  for(let i=0;i<3;i++){
+    if(!S.dcInit){S.dcMean[i]=acc[i]; S.axMean[i]=acc[i];}
+    S.dcMean[i]+=aDC*(acc[i]-S.dcMean[i]);
+    const d=acc[i]-S.axMean[i]; S.axMean[i]+=aV*d; S.axVar[i]=(1-aV)*(S.axVar[i]+aV*d*d);
+  }
+  if(!S.dcInit){ S.gyBias=[gyr[0],gyr[1],gyr[2]]; }
+  S.dcInit=true;
+  selectPlane();
+
+  const acA=acc[S.A]-S.dcMean[S.A], acB=acc[S.B]-S.dcMean[S.B];
+  const amp=Math.hypot(acA,acB); S.amp=amp;
+  // гіроскоп: вивчаємо зсув (bias), коли акселерометр показує спокій; далі рахуємо кутову швидкість без зсуву
+  if(amp<AMP_STILL && gd){ for(let i=0;i<3;i++) S.gyBias[i]+=0.03*(gyr[i]-S.gyBias[i]); }
+  const gRate=Math.hypot(gyr[0]-S.gyBias[0],gyr[1]-S.gyBias[1],gyr[2]-S.gyBias[2]);
+  S.gyRate += (gd?aR:0.2)*(gRate-S.gyRate);
+  const ang=Math.atan2(acA,acB);
+  // акселерометровий каденс (фаза)
+  if(S.prevAng!=null&&gd){
+    if(amp>AMP_STILL){ // рахуємо каденс лише коли є реальний сигнал (не шум спокою)
+      let dth=ang-S.prevAng; while(dth>Math.PI)dth-=2*Math.PI; while(dth<-Math.PI)dth+=2*Math.PI;
+      const r=Math.abs(dth)/(2*Math.PI)/dt*60;
+      if(r<RPM_MAX){ S.rpmAccelEma+=aR*(r-S.rpmAccelEma); S.rpmAccelSlow+=0.02*(r-S.rpmAccelSlow); }
+    } else { // спокій → каденс до нуля, без блукання від шуму
+      S.rpmAccelEma+=aR*(0-S.rpmAccelEma); S.rpmAccelSlow+=0.02*(0-S.rpmAccelSlow);
+    }
+  }
+  S.prevAng=ang;
+  const rpmA=S.rpmAccelEma;
+
+  // самокалібрація гіроскопа від акселерометра (коли сигнал добрий і рівний)
+  const stable=Math.abs(rpmA-S.rpmAccelSlow)<4;
+  if(amp>AMP_GOOD*0.8 && stable && rpmA>20 && S.gyRate>40){
+    const tgt=rpmA/S.gyRate; S.gyroScale = S.gyroScale==null?tgt : S.gyroScale+0.03*(tgt-S.gyroScale);
+  }
+  const rpmG = S.gyroScale!=null ? S.gyRate*S.gyroScale : null; S.rpmGyro=rpmG||0;
+
+  // виявлення кратної помилки + вибір джерела
+  let rpm=rpmA, src="accel";
+  if(rpmG!=null && rpmG>GYRO_MIN_RPM){
+    const ratio=rpmA/rpmG;
+    if(ratio>1.6&&ratio<2.4){ S.harmonic=Math.min(20,S.harmonic+1); } // accel вдвічі завищує
+    else if(ratio>0.42&&ratio<0.62){ S.harmonic=Math.max(-20,S.harmonic-1); } // вдвічі занижує
+    else S.harmonic=S.harmonic>0?S.harmonic-1:(S.harmonic<0?S.harmonic+1:0);
+    if(S.harmonic>8){ rpm=rpmA/2; src="accel÷2"; flash("виявив ×2 — скоригував"); }
+    else if(S.harmonic<-8){ rpm=rpmA*2; src="accel×2"; flash("виявив ½ — скоригував"); }
+  }
+  // слабкий акселерометр → гіро як запас (якщо вже відкалібрований)
+  const rotationDetected = S.gyRate>GYRO_SPIN;
+  if(amp<AMP_MIN && rotationDetected && rpmG!=null && rpmG>GYRO_MIN_RPM){ rpm=rpmG; src="gyro"; }
+  S.source=src; S.rpm=rpm;
+
+  // впевненість
+  const ampConf=clamp((amp-AMP_MIN)/(AMP_GOOD-AMP_MIN),0,1);
+  const spr = rpm>5 ? S.hzEst/(rpm/60) : 12;
+  const hzConf=clamp((spr-5)/6,0,1);
+  let agrConf=0.6;
+  if(rpmG!=null&&rpm>GYRO_MIN_RPM){ agrConf=clamp(1-Math.abs(rpm-rpmG)/Math.max(rpm,20)/0.3,0,1); }
+  const moving = amp>=AMP_MIN || rotationDetected;
+  S.moving = moving;
+  S.confidence = moving ? 0.5*ampConf+0.3*agrConf+0.2*hzConf : 0;
+
+  // авто-пауза / рух
+  if(moving) S.lastMotionT=t;
+  S.autoPaused = S.running && !S.paused && (t-S.lastMotionT>AUTOPAUSE_S);
+  const active = S.running && !S.paused && !S.autoPaused;
+
+  if(!moving){ S.rpm = S.rpm*0.6; if(S.rpm<1)S.rpm=0; }
+
+  // акумуляція статистики
+  if(active && gd && moving && S.rpm>3){
+    S.hasData=true;
+    S.totalTime+=dt; S.movTime+=dt;
+    S.revs += S.rpm/60*dt;
+    S.avgSum += S.rpm*dt;
+    if(S.rpm>S.maxRpm)S.maxRpm=S.rpm;
+    if(S.confidence>0.6)S.sumConfMov+=dt;
+    if(rpmG!=null){ S.agrSum+=agrConf*dt; S.agrTime+=dt; }
+    S.hzSum+=S.hzEst*dt; S.hzTime+=dt;
+    pushSeries(t);
+    cadenceAlert();
+  } else if(active && gd){
+    // коастинг (рухаєшся, але <порога) — рахуємо як час, але не як рух
+    S.totalTime+=dt;
+  }
+  render();
+}
+function cadenceAlert(){ if(!S.beepOn||!S.target||!S.audioCtx||S.confidence<0.4)return;
+  const diff=S.rpm-S.target; if(Math.abs(diff)>6){ const t=now(); if(t-S.lastBeep>1.5){ beep(diff<0?520:900); S.lastBeep=t; } } }
+function unlockAudio(){ if(!S.audioCtx){try{S.audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(S.audioCtx&&S.audioCtx.state==="suspended")S.audioCtx.resume(); }
+function beep(f){ const c=S.audioCtx; if(!c)return; const o=c.createOscillator(),g=c.createGain(); o.frequency.value=f; o.connect(g); g.connect(c.destination);
+  g.gain.setValueAtTime(0.0001,c.currentTime); g.gain.exponentialRampToValueAtTime(0.22,c.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.14); o.start(); o.stop(c.currentTime+0.15); }
+
+// ================= Сесія / кола / фініш =================
+function startSession(){ initSessionVars(); }
+function initSessionVars(){
+  S.running=true; S.hasData=false; S.paused=false; S.autoPaused=false; S.lastMotionT=now();
+  S.revs=0; S.maxRpm=0; S.rpm=0; S.rpmAccelEma=0; S.rpmAccelSlow=0; S.avgSum=0; S.movTime=0; S.totalTime=0;
+  S.sumConfMov=0; S.agrSum=0; S.agrTime=0; S.hzSum=0; S.hzTime=0;
+  S.series=[]; S.lapMarks=[0]; S.prevAng=null; S.dcInit=false; S.A=-1; S.B=-1; S.planeConfirm=0;
+  S.gyroScale=null; S.harmonic=0; S.gapCount=0; S.validPk=0; S.totalPk=0; S.lastT=null;
+  S.gyBias=[0,0,0]; S.gyRate=0; S.moving=false;
+}
+$("pause").onclick=()=>{ if(!S.running)return; S.paused=!S.paused; if(!S.paused)S.lastMotionT=now(); updateButtons(); render(); };
+$("lap").onclick=()=>{ if(!S.running||S.movTime<3)return; S.lapMarks.push(S.totalTime); flash("коло "+ (S.lapMarks.length-1)); };
+function finish(){
+  S.wantConnected=false; if(S.battTimer){clearInterval(S.battTimer);S.battTimer=null;}
+  const ride=buildRide(); if(ride)saveRideObj(ride);
+  S.running=false; try{ if(S.dev&&S.dev.gatt.connected)S.dev.gatt.disconnect(); }catch(e){}
+  setStatus("off","заїзд завершено"); updateButtons(); render();
+  if(ride) openSummary(ride,true);
+}
+
+function buildRide(){
+  if(S.movTime<15||S.revs<3) return null;
+  const s=S.series;
+  const avg=S.movTime>0?S.avgSum/S.movTime:0;
+  // зони + гістограма + стабільність (з ваговим dt по series)
+  const zsec=[0,0,0,0,0]; const hist={}; let n=0,mean=0,m2=0;
+  for(let i=1;i<s.length;i++){ const dt=Math.min(1,s[i].t-s[i-1].t); if(dt<=0)continue; const r=s[i].rpm; if(r<1)continue;
+    zsec[zoneIdx(r)]+=dt; const b=Math.min(120,Math.max(40,Math.floor(r/10)*10)); hist[b]=(hist[b]||0)+dt;
+    n++; const d=r-mean; mean+=d/n; m2+=d*(r-mean); }
+  const sd=n>1?Math.sqrt(m2/n):0; const cv=mean>0?sd/mean:0; const stability=Math.round(clamp(100*(1-cv/0.5),0,100));
+  // достовірність
+  const confFrac=S.movTime>0?S.sumConfMov/S.movTime:0;
+  const agr=S.agrTime>0?S.agrSum/S.agrTime:0.6;
+  const avgHz=S.hzTime>0?S.hzSum/S.hzTime:S.hzEst;
+  const hzAdq=clamp((avgHz-8)/8,0,1);
+  const trust=Math.round(100*(0.45*confFrac+0.35*agr+0.20*hzAdq));
+  const validRatio=S.totalPk>0?S.validPk/S.totalPk:1;
+  // кола
+  const laps=[]; const marks=S.lapMarks.concat([S.totalTime]);
+  for(let k=0;k<marks.length-1;k++){ const t0=marks[k],t1=marks[k+1]; if(t1-t0<2)continue;
+    let lr=0,lmax=0,lsum=0,ldt=0; for(let i=1;i<s.length;i++){ if(s[i].t<=t0||s[i].t>t1)continue; const dt=Math.min(1,s[i].t-s[i-1].t); if(dt<=0)continue; if(s[i].rpm>=1){lsum+=s[i].rpm*dt; ldt+=dt; if(s[i].rpm>lmax)lmax=s[i].rpm;} }
+    laps.push({n:k+1,dur:Math.round(t1-t0),avg:ldt>0?Math.round(lsum/ldt):0,max:Math.round(lmax)}); }
+  return { id:Date.now(),date:new Date().toISOString(),
+    dur:Math.round(S.totalTime),moving:Math.round(S.movTime),avg:Math.round(avg),max:Math.round(S.maxRpm),revs:Math.floor(S.revs),
+    stability, trust, confFrac:Math.round(confFrac*100), agr:Math.round(agr*100), avgHz:+avgHz.toFixed(1), validRatio:Math.round(validRatio*100),
+    zones:zsec, hist, laps, series:downsample(S.series) };
+}
+function zoneIdx(r){ for(let i=0;i<ZONES.length;i++) if(r<ZONES[i][0]) return i; return 4; }
+function saveRideObj(r){ const h=loadHistory(); h.unshift(r); while(h.length>40)h.pop(); try{localStorage.setItem(HIST_KEY,JSON.stringify(h));}catch(e){} }
+function loadHistory(){ try{return JSON.parse(localStorage.getItem(HIST_KEY))||[];}catch(e){return [];} }
+function downsample(s){ const out=[]; let nx=0; for(const p of s){ if(p.t>=nx){ out.push({t:+p.t.toFixed(1),ts:p.ts,rpm:+p.rpm.toFixed(1),g:+p.g.toFixed(1),c:+p.c.toFixed(2)}); nx=p.t+1; } } return out; }
+function pushSeries(t){ S.series.push({t:S.totalTime,ts:Math.round(Date.now()),rpm:S.rpm,g:S.rpmGyro,c:S.confidence,revs:S.revs}); }
+
+// ================= Ціль =================
+function setTarget(v){ S.target=v; $("tval").textContent=v==null?"—":v; drawTargetTick(); render(); }
+$("tmin").onclick=()=>{ let v=S.target==null?85:S.target-5; if(v<40)v=null; setTarget(v); };
+$("tplus").onclick=()=>{ let v=S.target==null?60:S.target+5; if(v>140)v=140; setTarget(v); };
+$("beep").onclick=()=>{ S.beepOn=!S.beepOn; $("beep").classList.toggle("on",S.beepOn); unlockAudio(); if(S.beepOn&&S.target==null)setTarget(85); };
+function drawTargetTick(){ const tk=$("tick"); if(S.target==null){tk.style.display="none";return;} tk.style.display="block"; tk.style.left=Math.min(100,S.target/130*100)+"%"; }
+
+// ручна перекалібровка по тапу на цифру
+$("gauge").addEventListener("click",()=>{ if(!S.running)return; S.A=-1;S.B=-1;S.prevAng=null;S.gyroScale=null;S.harmonic=0; flash("ручна перекалібровка"); runSelfTest(); });
+
+// ================= Рендер =================
+function zoneOf(r){ return ZONES[zoneIdx(r)]; }
+function fmtT(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60); return (m>=60?Math.floor(m/60)+":"+String(m%60).padStart(2,"0"):m)+":"+String(s%60).padStart(2,"0"); }
+let raf=false; function render(){ if(raf)return; raf=true; requestAnimationFrame(()=>{raf=false; draw();}); }
+function draw(){
+  const r=Math.round(S.rpm); $("rpm").textContent=r;
+  const z=zoneOf(S.rpm); const paused=S.paused||S.autoPaused;
+  $("zone").textContent=S.running?z[3]:"—"; $("zone").style.color=z[1];
+  $("rpm").classList.toggle("paused",paused);
+  $("pausetag").style.display=paused?"block":"none";
+  $("pausetag").textContent=S.paused?"⏸ ПАУЗА":"⏸ АВТО-ПАУЗА";
+  $("gauge").style.boxShadow=(S.running&&!paused)?("0 0 0 2px "+z[2]+"33, 0 8px 30px "+z[2]+"22"):"none";
+  const f=$("fill"); f.style.width=Math.min(100,S.rpm/130*100)+"%"; f.style.background=z[1];
+  $("avg").textContent=S.movTime>0?Math.round(S.avgSum/S.movTime):0;
+  $("max").textContent=Math.round(S.maxRpm);
+  $("revs").textContent=Math.floor(S.revs);
+  $("time").textContent=fmtT(S.movTime);
+  // бейдж впевненості
+  const cb=$("conf"),cd=cb.querySelector(".cd");
+  let col=getComputedStyle(document.body).getPropertyValue('--muted'),txt="—";
+  if(S.running&&!paused){
+    if(S.confidence>=0.75){col="#22c55e";txt="точно";}
+    else if(S.confidence>=0.45){col="#f59e0b";txt="перевіряю";}
+    else if(S.confidence>0){col="#f59e0b";txt="слабкий сигнал";}
+    else {col="#6e7681";txt="стоп";}
+  }
+  cd.style.background=col; $("conftxt").textContent=txt;
+  // діагностичний рядок (чесний статус)
+  if(now()<flashUntil){ setDiag(flashMsg,""); }
+  else if(!S.selftest){
+    const info=[];
+    if(S.running&&!paused){
+      if(!S.moving) info.push("нерухомо — крути педалі");
+      else if(S.confidence>0&&S.confidence<0.45&&S.amp<AMP_MIN) info.push("⚠ слабкий сигнал — перевір кріплення Triki");
+      else if(S.source.indexOf("÷")>=0||S.source.indexOf("×")>=0) info.push("кратну помилку скориговано");
+      else info.push(S.hzEst.toFixed(0)+"Гц"+(S.gyroScale!=null?" · гіро ✓":" · калібрую гіро…"));
+    }
+    if(S.batt!=null) info.push("🔋"+S.batt+"%");
+    setDiag(info.join(" · "), (S.confidence>0&&S.confidence<0.45&&S.amp<AMP_MIN)?"warn":"");
+  }
+  drawChart();
+}
+function setDiag(t,cls){ const d=$("diag"); d.textContent=t; d.className="diag"+(cls?" "+cls:""); }
+
+const cvs=$("chart"),ctx=cvs.getContext("2d");
+function drawChart(){ const dpr=window.devicePixelRatio||1,w=cvs.clientWidth,h=cvs.clientHeight; if(cvs.width!==w*dpr){cvs.width=w*dpr;cvs.height=h*dpr;}
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h); const MAXR=140;
+  [50,70,90,110].forEach(v=>{const y=h-(v/MAXR)*h;ctx.strokeStyle="#ffffff10";ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();});
+  if(S.target!=null){const y=h-Math.min(1,S.target/MAXR)*h;ctx.strokeStyle="#ffffff55";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();ctx.setLineDash([]);}
+  if(S.series.length<2)return; const t1=S.series[S.series.length-1].t,t0=t1-60;
+  ctx.lineWidth=2; ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent'); ctx.beginPath(); let st=false;
+  for(const p of S.series){ if(p.t<t0)continue; const x=(p.t-t0)/60*w,y=h-Math.min(1,p.rpm/MAXR)*h; st?ctx.lineTo(x,y):ctx.moveTo(x,y); st=true; } ctx.stroke();
+}
+
+// ================= Історія + підсумок =================
+$("hist").onclick=()=>{ renderHistory(); openModal("Історія заїздів"); };
+$("mclose").onclick=()=>$("modal").classList.remove("open");
+$("modal").onclick=e=>{ if(e.target===$("modal"))$("modal").classList.remove("open"); };
+function openModal(title){ $("mtitle").textContent=title; $("modal").classList.add("open"); }
+function renderHistory(){ const h=loadHistory(),box=$("mbody");
+  if(!h.length){ box.innerHTML='<div class="empty">Ще немає заїздів.<br>Заверши перший — і він зʼявиться тут.</div>'; return; }
+  box.innerHTML=""; h.forEach(r=>{ const d=new Date(r.date),el=document.createElement("div"); el.className="ride";
+    el.innerHTML=`<div class="top"><span class="big">${r.avg} <span style="font-size:12px;color:var(--muted)">сер · ${r.max} макс</span></span>
+      <span class="date">${d.toLocaleDateString('uk-UA')} ${d.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})}</span></div>
+      <div class="met">⏱ ${fmtT(r.moving)} у русі · 🔄 ${r.revs} · ✔ достовірність ${r.trust}%</div>
+      <div class="acts"><button data-open="${r.id}">Деталі</button><button data-csv="${r.id}">CSV</button><button data-del="${r.id}">✕</button></div>`;
+    box.appendChild(el); });
+  box.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const r=loadHistory().find(x=>x.id==b.dataset.open); if(r)openSummary(r,false);});
+  box.querySelectorAll("[data-csv]").forEach(b=>b.onclick=()=>{const r=loadHistory().find(x=>x.id==b.dataset.csv); if(r)exportCSV(r);});
+  box.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const h2=loadHistory().filter(x=>x.id!=b.dataset.del); try{localStorage.setItem(HIST_KEY,JSON.stringify(h2));}catch(e){} renderHistory(); });
+}
+function trustNote(r){ if(r.trust>=80)return ["#22c55e","Triki добре збігається з власною перехресною перевіркою — дані надійні для звірки з Garmin."];
+  if(r.trust>=55)return ["#f59e0b","Прийнятно, але були ділянки слабкого сигналу — звіряй із Garmin уважніше."];
+  return ["#ef4444","Низька достовірність — імовірно проблема кріплення або слабка частота даних."]; }
+function openSummary(r,fresh){
+  const tn=trustNote(r); const zTot=r.zones.reduce((a,b)=>a+b,0)||1;
+  let zrows=""; for(let i=0;i<5;i++){ const pc=r.zones[i]/zTot*100; zrows+=`<div class="zrow"><span class="zn">${ZONES[i][3]}</span><span class="zbar"><div style="width:${pc}%;background:${ZONES[i][2]}"></div></span><span class="zt">${fmtT(r.zones[i])}</span></div>`; }
+  const bins=Object.keys(r.hist).map(Number).sort((a,b)=>a-b); const hmax=Math.max(1,...bins.map(b=>r.hist[b]));
+  let hrows=""; bins.forEach(b=>{ hrows+=`<div class="zrow"><span class="zn">${b}–${b+9}</span><span class="zbar"><div style="width:${r.hist[b]/hmax*100}%;background:var(--accent)"></div></span><span class="zt">${fmtT(r.hist[b])}</span></div>`; });
+  let laps=""; if(r.laps&&r.laps.length>1){ laps='<div class="secttl">Кола</div><table class="laps"><tr><th>Коло</th><th>Час</th><th>Сер</th><th>Макс</th></tr>';
+    r.laps.forEach(l=>laps+=`<tr><td>${l.n}</td><td>${fmtT(l.dur)}</td><td>${l.avg}</td><td>${l.max}</td></tr>`); laps+='</table>'; }
+  const d=new Date(r.date);
+  $("mbody").innerHTML=`
+    <div class="trust" style="border-color:${tn[0]}55;background:${tn[0]}12">
+      <div class="lb">Достовірність Triki</div><div class="big" style="color:${tn[0]}">${r.trust}%</div>
+      <div class="note" style="color:${tn[0]}">${tn[1]}</div></div>
+    <div class="sgrid">
+      <div class="c"><div class="v">${r.avg}</div><div class="k">середній</div></div>
+      <div class="c"><div class="v">${r.max}</div><div class="k">макс</div></div>
+      <div class="c"><div class="v">${r.stability}%</div><div class="k">стабільність</div></div>
+      <div class="c"><div class="v">${fmtT(r.moving)}</div><div class="k">у русі</div></div>
+      <div class="c"><div class="v">${r.revs}</div><div class="k">оберти</div></div>
+      <div class="c"><div class="v">${r.avgHz}</div><div class="k">Гц даних</div></div>
+    </div>
+    <div class="secttl">Час у зонах каденсу</div>${zrows}
+    <div class="secttl">Розподіл каденсу</div>${hrows}
+    ${laps}
+    <div class="secttl">Якість даних</div>
+    <div class="ride met" style="border:none;padding:0;color:var(--muted);font-size:12.5px;line-height:1.7">
+      Впевнені виміри: ${r.confFrac}% часу · Збіг акс↔гіро: ${r.agr}% · Валідних пакетів: ${r.validRatio}% · ${d.toLocaleString('uk-UA')}</div>
+    <div style="display:flex;gap:8px;margin-top:14px"><button style="flex:1" data-scsv>Експорт CSV</button><button style="flex:1" data-sclose>Закрити</button></div>`;
+  $("mbody").querySelector("[data-scsv]").onclick=()=>exportCSV(r);
+  $("mbody").querySelector("[data-sclose]").onclick=()=>$("modal").classList.remove("open");
+  openModal(fresh?"Заїзд завершено":"Деталі заїзду");
+}
+const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform||""));
+function csvOf(r){ let csv="epoch_ms,iso_time,t_s,cadence_rpm,cadence_gyro_rpm,confidence\n";
+  (r.series||[]).forEach(p=>{ const iso=p.ts?new Date(p.ts).toISOString():""; csv+=`${p.ts||""},${iso},${(+p.t).toFixed(1)},${(+p.rpm).toFixed(1)},${(+(p.g||0)).toFixed(1)},${(+(p.c||0)).toFixed(2)}\n`; }); return csv; }
+async function exportCSV(r){
+  const csv=csvOf(r), fname="triki_ride_"+new Date(r.date).toISOString().slice(0,19).replace(/[:T]/g,"-")+".csv";
+  let file=null; try{ file=new File([csv],fname,{type:"text/csv"}); }catch(e){}
+  // 1) iOS/мобільний: системне меню «Поділитися» → Зберегти у Файли/Нотатки
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:fname}); return; }catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  // 2) десктоп: звичайне завантаження файлу
+  if(!IS_IOS){ try{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=fname; document.body.appendChild(a); a.click(); a.remove(); return; }catch(e){} }
+  // 3) запасний варіант скрізь: показати текст для копіювання
+  showTextExport(csv);
+}
+function showTextExport(csv){
+  let o=document.getElementById("txtexp");
+  if(!o){ o=document.createElement("div"); o.id="txtexp";
+    o.style.cssText="position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;padding:14px;gap:10px;padding-top:calc(env(safe-area-inset-top) + 14px)";
+    o.innerHTML='<div style="font-size:13px;color:var(--muted)">Виділи все → Копіювати → встав у Нотатки/пошту. Або тисни «Скопіювати».</div>'+
+      '<textarea id="txtexpA" readonly style="flex:1;width:100%;font-size:11px;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px"></textarea>'+
+      '<div style="display:flex;gap:8px"><button id="txtexpC" style="flex:1">Скопіювати</button><button id="txtexpX" style="flex:1">Закрити</button></div>';
+    document.body.appendChild(o);
+    document.getElementById("txtexpX").onclick=()=>o.style.display="none";
+    document.getElementById("txtexpC").onclick=async()=>{ const a=document.getElementById("txtexpA"); a.focus(); a.select(); a.setSelectionRange(0,a.value.length);
+      try{ await navigator.clipboard.writeText(a.value); document.getElementById("txtexpC").textContent="Скопійовано ✓"; }
+      catch(e){ try{ document.execCommand("copy"); document.getElementById("txtexpC").textContent="Скопійовано ✓"; }catch(e2){} } };
+  }
+  o.style.display="flex"; const ta=document.getElementById("txtexpA"); ta.value=csv; ta.focus(); ta.select();
+}
+
+// ================= Статус / кнопки / екран =================
+function setStatus(cls,txt){ const d=$("dot"); d.className="dot"+(cls==="on"?" on":cls==="wait"?" wait":""); $("stxt").textContent=txt; }
+function updateButtons(){ const p=$("primary");
+  if(S.wantConnected){ p.textContent="⏹ Завершити заїзд"; p.classList.add("stop"); } else { p.textContent="Підключити Triki"; p.classList.remove("stop"); }
+  $("pause").disabled=!S.wantConnected; $("lap").disabled=!S.wantConnected;
+  $("pause").textContent=S.paused?"▶ Далі":"⏸ Пауза"; $("pause").classList.toggle("act",S.paused);
+}
+$("wake").onclick=()=>{ S.wakeMode=(S.wakeMode+1)%3; $("wake").textContent=["🔆 Авто","🔒 Завжди","🌙 Вимк"][S.wakeMode]; if(S.wakeMode===2)releaseWake(); else requestWake(); };
+async function requestWake(){ if(S.wakeMode===2||!("wakeLock"in navigator))return; try{S.wakeLock=await navigator.wakeLock.request("screen");}catch(e){} }
+function releaseWake(){ try{S.wakeLock&&S.wakeLock.release();S.wakeLock=null;}catch(e){} }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible")requestWake(); });
+
+updateButtons(); render();
+</script>
+</body>
+</html>

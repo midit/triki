@@ -1,0 +1,19 @@
+{
+  "name": "IronCap — Triki Gym",
+  "short_name": "IronCap",
+  "description": "Трекер підходів, крену грифа та швидкості штанги на датчику Triki",
+  "start_url": "./ironcap.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d12",
+  "theme_color": "#0a0d12",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230a0d12'/%3E%3Ccircle cx='256' cy='256' r='120' fill='none' stroke='%232f7cf6' stroke-width='26'/%3E%3Ccircle cx='256' cy='256' r='42' fill='%232fd07a'/%3E%3Crect x='96' y='238' width='320' height='36' rx='18' fill='%23e8edf5' opacity='.18'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
