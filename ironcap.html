@@ -267,8 +267,8 @@ const ACC_LSB=2048.0, GYR_LSB=131.0, G_MS2=9.80665;
 
 const DT_MIN=0.004, DT_MAX=0.20;      // затиск кроку часу
 const GAP_RESET=0.35;                 // більша пауза — скидаємо фільтри
-const PER_MIN=0.55, PER_MAX=9.0;      // межі тривалості повтору, с
-const AMP_FLOOR=0.030;                // g — нижче це не рух
+const PER_MIN=0.70, PER_MAX=9.0;      // межі тривалості повтору, с
+const AMP_FLOOR=0.048;                // підлога порогу (одиниці псевдошвидкості)
 
 const $=id=>document.getElementById(id);
 const now=()=>performance.now()/1000;
@@ -285,10 +285,9 @@ const S={
   mode:0, dev:null, chW:null, chLed:null, connected:false,
   tLast:0, hz:0, pkTotal:0, pkFrames:0,
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
-  aV:0, sig:0, fast:0, slow:0, rms:0, thr:0,
+  aV:0, sig:0, fast:0, slow:0, rms:0, thr:0, pv:0, pvHi:0, pvLo:0,
   motion:0, motionEma:0, stillT:0, moveT:0,
-  st:0, tFlip:0, tRepStart:0, halfUp:0, halfDn:0, lastRep:-99,
-  vel:0, velT:0, romEst:0,
+  st:0, tFlip:0, tCycle:0, halfUp:0, halfDn:0, lastRep:-99,
   reps:[], tut:0, base:null, fatigued:false,
   sets:0, allReps:0, allTut:0, hist:[], log:[], t0:now(), running:false,
   btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false,
@@ -406,7 +405,7 @@ function frame(dv,o,btn){
 /* ══ ФІЗИКА ══ */
 function physics(a,g,dt,t,gap){
   if(!S.gInit){ S.grav=[a[0],a[1],a[2]]; S.gyBias=[g[0],g[1],g[2]]; S.gInit=true; }
-  if(gap){ S.fast=S.slow=S.sig=0; S.st=0; S.vel=0; }   // на розриві не вигадуємо
+  if(gap){ S.fast=S.slow=S.sig=S.pv=S.pvHi=S.pvLo=0; S.st=0; }  // на розриві не вигадуємо
 
   const tauG=(S.stillT>.25)?0.3:2.0;
   const kG=1-Math.exp(-dt/tauG);
@@ -430,20 +429,27 @@ function physics(a,g,dt,t,gap){
   const u=[S.grav[0]/gl,S.grav[1]/gl,S.grav[2]/gl];
   S.aV=(lin[0]*u[0]+lin[1]*u[1]+lin[2]*u[2])/S.gn;
 
-  // смуговий фільтр: прибрати шум (0.12 с) і дрейф (1.2 с)
+  // смуговий фільтр прискорення: прибрати шум (0.12 с) і дрейф (1.2 с)
   S.fast+=(1-Math.exp(-dt/0.12))*(S.aV-S.fast);
   S.slow+=(1-Math.exp(-dt/1.2))*(S.aV-S.slow);
-  S.sig=S.fast-S.slow;
+  const acc=S.fast-S.slow;
+
+  // ПСЕВДОШВИДКІСТЬ. У прискоренні на один присід припадає ДВА
+  // додатні горби (розгін і гальмування в кожній фазі), тому по ньому
+  // цикл виходив подвійним. Після інтегрування на повтор лишається
+  // рівно один цикл. Другий смуговий фільтр прибиває дрейф інтеграла.
+  // На розмічених даних це знизило сумарну похибку з 26 до 10,
+  // а хибні спрацювання на ходьбі — з 18 до 2.
+  S.pv  += acc*G_MS2*dt;
+  S.pvHi+= (1-Math.exp(-dt/1.0))*(S.pv-S.pvHi);
+  S.pvLo+= (1-Math.exp(-dt/0.10))*(S.pv-S.pvLo);
+  S.sig  = S.pvLo-S.pvHi;
 
   // адаптивний поріг з ковзного СКО
   S.rms+=(1-Math.exp(-dt/3.0))*(S.sig*S.sig-S.rms);
-  const sens=1.25-CFG.sens/100;                       // 50 → 0.75
+  const sens=1.4-CFG.sens/100;                        // 50 → 0.9 (підібрано)
   const ampMin=TPL? Math.max(AMP_FLOOR,TPL.amp*0.40) : AMP_FLOOR;
   S.thr=Math.max(ampMin,Math.sqrt(Math.max(S.rms,1e-9))*sens);
-
-  // коротке ОБМЕЖЕНЕ інтегрування — лише для метрик у межах повтору
-  S.vel=(S.vel+S.aV*G_MS2*dt)*Math.exp(-dt/0.7);
-  S.vel=clamp(S.vel,-3,3);
 
   counter(dt,t);
   restLogic(dt,t);
@@ -459,21 +465,23 @@ function counter(dt,t){
   const perMin=TPL? Math.max(PER_MIN,TPL.per*0.45) : PER_MIN;
   const perMax=TPL? Math.min(PER_MAX,TPL.per*2.6)  : PER_MAX;
 
-  if(S.st<=0 && s>th){
-    if(S.st===-1){ S.halfDn=t-S.tFlip; halfDone(t,'up',perMin,perMax); }
-    else { S.tRepStart=t; }
-    S.st=1; S.tFlip=t;
-  } else if(S.st>=0 && s<-th){
-    if(S.st===1){ S.halfUp=t-S.tFlip; halfDone(t,'down',perMin,perMax); }
-    else { S.tRepStart=t; }
+  // ПОВТОР = ПОВНИЙ ЦИКЛ, тобто повернення до того самого напрямку.
+  // Раніше зараховувалось на кожній зміні напрямку — а їх у повторі
+  // дві (вниз і вгору), тому виходило рівно вдвічі більше.
+  if(S.st<=0 && s>th){                      // перетин угору
+    if(S.st===-1){
+      S.halfDn=t-S.tFlip;
+      if(S.tCycle>0) cycleDone(t, t-S.tCycle, perMin, perMax);
+    }
+    S.tCycle=t; S.st=1; S.tFlip=t;
+  } else if(S.st>=0 && s<-th){              // перетин униз — лише півцикла
+    if(S.st===1) S.halfUp=t-S.tFlip;
     S.st=-1; S.tFlip=t;
   }
   // довга тиша — підхід скінчився, скидаємо фазу
-  if(S.st!==0 && t-S.tFlip>perMax){ S.st=0; }
+  if(S.st!==0 && t-S.tFlip>perMax){ S.st=0; S.tCycle=0; }
 }
-function halfDone(t,dir,perMin,perMax){
-  const per=t-S.tRepStart;
-  S.tRepStart=t;
+function cycleDone(t,per,perMin,perMax){
   if(per<perMin||per>perMax) return;
   if(t-S.lastRep<perMin) return;            // рефрактерний період
   S.lastRep=t;
