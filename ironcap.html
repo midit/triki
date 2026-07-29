@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="IronCap">
 <link rel="manifest" href="manifest.webmanifest">
-<title>IronCap — Triki Gym</title>
+<title>IronCap — Triki Gym Rep Counter</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:#0a0d12;color:#e8edf5;
@@ -108,10 +108,10 @@ select{background:#0c1119;border:1px solid #24303f;color:#e8edf5;border-radius:9
 .conf.hi{background:#08190f;border:1px solid #1c5a35;color:#6ee7a0}
 .conf.lo{background:#1a1508;border:1px solid #5a4a1a;color:#ffd98a}
 
-.exlist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
-.exopt{background:#0c1119;border:1px solid #1a2230;border-radius:11px;padding:12px;font-size:14px;font-weight:700}
+.exlist{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.exopt{background:#0c1119;border:1px solid #1a2230;border-radius:11px;padding:10px 12px;font-size:13.5px;font-weight:700}
 .exopt.sel{border-color:#2f7cf6;background:#101d2f}
-.exopt small{display:block;font-weight:500;color:#6c7d95;font-size:11px;margin-top:2px}
+.exopt small{display:block;font-weight:500;color:#6c7d95;font-size:10.5px;margin-top:2px}
 
 .rest{position:fixed;inset:0;background:#070a0f;z-index:55;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px}
 .rest.on{display:flex}
@@ -143,141 +143,150 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
 <div class="wrap">
 
   <div class="top">
-    <span class="dot" id="dot"></span><span id="stat">не підключено</span>
+    <span class="dot" id="dot"></span><span id="stat">not connected</span>
     <span class="sp"></span>
     <span class="chip" id="chBat">🔋 —</span>
-    <span class="chip" id="chHz">— Гц</span>
+    <span class="chip" id="chHz">— Hz</span>
   </div>
 
   <div class="tabs" id="tabs">
-    <div class="tab act" data-m="0">🏋️ Тренування</div>
-    <div class="tab" data-m="1">📚 Історія</div>
-    <div class="tab" data-m="2">📡 Дані</div>
+    <div class="tab act" data-m="0">🏋️ Workout</div>
+    <div class="tab" data-m="1">📚 History</div>
+    <div class="tab" data-m="2">📡 Data</div>
   </div>
 
-  <!-- ============ ТРЕНУВАННЯ ============ -->
+  <!-- ============ WORKOUT ============ -->
   <section id="p0">
-    <div class="golive" id="goLive">ПОЧАТИ ПІДХІД<span>або клік кнопкою на кришці</span></div>
+    <div class="golive" id="goLive">START SET<span>or click the button on the cap</span></div>
 
-    <div class="card" id="liveCard">
-      <div class="hd">Підхід <span class="sp"></span><span id="l_ex">—</span></div>
+    <div class="card">
+      <div class="hd">Current set <span class="sp"></span><span id="l_ex">—</span></div>
       <div class="big idle mono" id="l_reps">0</div>
-      <div class="sub" id="l_phase">натисни «почати підхід»</div>
+      <div class="sub" id="l_phase">press “start set”</div>
       <div class="bar"><i id="l_bar" style="width:0;background:#2f7cf6"></i></div>
       <div class="grid3">
-        <div class="cell"><div class="v mono" id="l_tempo">—</div><div class="k">опускання</div></div>
-        <div class="cell"><div class="v mono" id="l_per">—</div><div class="k">с/повтор</div></div>
-        <div class="cell"><div class="v mono" id="l_dur">0:00</div><div class="k">тривалість</div></div>
+        <div class="cell"><div class="v mono" id="l_tempo">—</div><div class="k">eccentric</div></div>
+        <div class="cell"><div class="v mono" id="l_per">—</div><div class="k">sec / rep</div></div>
+        <div class="cell"><div class="v mono" id="l_dur">0:00</div><div class="k">duration</div></div>
       </div>
       <div id="l_note"></div>
     </div>
 
     <div class="card">
-      <div class="hd">Сьогодні <span class="sp"></span><span id="w_clock" class="mono">0:00</span></div>
+      <div class="hd">Today <span class="sp"></span><span id="w_clock" class="mono">0:00</span></div>
       <div class="grid3">
-        <div class="cell"><div class="v mono" id="w_sets">0</div><div class="k">підходів</div></div>
-        <div class="cell"><div class="v mono" id="w_reps">0</div><div class="k">повторів</div></div>
-        <div class="cell"><div class="v mono" id="w_ex">0</div><div class="k">вправ</div></div>
+        <div class="cell"><div class="v mono" id="w_sets">0</div><div class="k">sets</div></div>
+        <div class="cell"><div class="v mono" id="w_reps">0</div><div class="k">reps</div></div>
+        <div class="cell"><div class="v mono" id="w_ex">0</div><div class="k">exercises</div></div>
       </div>
       <div id="w_list" style="margin-top:12px"></div>
     </div>
   </section>
 
-  <!-- ============ ІСТОРІЯ ============ -->
+  <!-- ============ HISTORY ============ -->
   <section id="p1" class="hide">
     <div class="card">
-      <div class="hd">Мої вправи <span class="sp"></span><span class="hint">точність росте з виправлень</span></div>
+      <div class="hd">My exercises <span class="sp"></span><span class="hint">accuracy improves with corrections</span></div>
       <div id="h_ex"></div>
     </div>
     <div class="card">
-      <div class="hd">Тренування</div>
+      <div class="hd">Workouts</div>
       <div id="h_wk"></div>
     </div>
   </section>
 
-  <!-- ============ ДАНІ ============ -->
+  <!-- ============ DATA ============ -->
   <section id="p2" class="hide">
     <div class="card">
-      <div class="hd">Сигнал <span class="sp"></span><span id="d_hz" class="mono">—</span></div>
+      <div class="hd">Signal <span class="sp"></span><span id="d_hz" class="mono">—</span></div>
       <canvas class="chart" id="cvR"></canvas>
       <div class="grid3">
-        <div class="cell"><div class="v mono" id="d_sig">0.00</div><div class="k">сигнал</div></div>
-        <div class="cell"><div class="v mono" id="d_thr">0.00</div><div class="k">поріг</div></div>
-        <div class="cell"><div class="v mono" id="d_gyr">0</div><div class="k">гіро °/с</div></div>
+        <div class="cell"><div class="v mono" id="d_sig">0.00</div><div class="k">signal</div></div>
+        <div class="cell"><div class="v mono" id="d_thr">0.00</div><div class="k">threshold</div></div>
+        <div class="cell"><div class="v mono" id="d_gyr">0</div><div class="k">gyro °/s</div></div>
       </div>
     </div>
     <div class="card">
-      <div class="hd">Стан</div>
-      <pre class="dbg" id="d_dbg">—</pre>
+      <div class="hd">Research log <span class="sp"></span><span id="r_count">0 sets</span></div>
+      <div class="hint">Every set is stored with its raw vertical-acceleration trace and the
+        confirmed rep count. This is the dataset the counter learns from — export it and keep it safe.</div>
       <div class="row" style="border:0">
-        <span class="btn" id="bCsv" style="flex:1">Експорт CSV</span>
-        <span class="btn" id="bDemo" style="flex:1">Демо</span>
+        <span class="btn prim" id="bResearch" style="flex:2">Export dataset (JSON)</span>
+        <span class="btn" id="bCsv" style="flex:1">Raw CSV</span>
       </div>
+      <div class="row" style="border:0">
+        <span class="btn gh" id="bDemo" style="flex:1">Demo mode</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="hd">Status</div>
+      <pre class="dbg" id="d_dbg">—</pre>
     </div>
   </section>
 </div>
 
 <div class="dock"><div class="dockin">
-  <div class="btn prim" id="bConn">Підключити<span class="s">Triki</span></div>
-  <div class="btn ok" id="bSet">Почати підхід<span class="s">1 клік кнопкою</span></div>
+  <div class="btn prim" id="bConn">Connect<span class="s">Triki</span></div>
+  <div class="btn ok" id="bSet">Start set<span class="s">1 click on cap</span></div>
   <div class="btn sq gh" id="bCfg">⚙</div>
 </div></div>
 
 <div class="rest" id="rest">
-  <div class="lbl" id="r_lbl">відпочинок</div>
+  <div class="lbl" id="r_lbl">rest</div>
   <div class="t mono" id="r_t">1:30</div>
-  <div class="btn gh" id="r_skip" style="margin-top:10px;padding:11px 26px">Пропустити</div>
-  <div class="hint" style="margin-top:12px;text-align:center">Магнітом догори — таймер завмре</div>
+  <div class="btn gh" id="r_skip" style="margin-top:10px;padding:11px 26px">Skip</div>
+  <div class="hint" style="margin-top:12px;text-align:center">Magnet side up — timer pauses</div>
 </div>
 
-<!-- ====== ПІСЛЯ ПІДХОДУ ====== -->
+<!-- ====== AFTER A SET ====== -->
 <div class="sheet" id="post"><div class="sheetin">
-  <h2>Підхід закінчено<span class="sp"></span><span class="btn gh sq" id="postX" style="width:40px;padding:8px 0">✕</span></h2>
+  <h2>Set finished<span class="sp"></span><span class="btn gh sq" id="postX" style="width:40px;padding:8px 0">✕</span></h2>
   <div class="counter">
     <div class="pm" id="pm_minus">−</div>
     <div class="n mono" id="pm_n">0</div>
     <div class="pm" id="pm_plus">+</div>
   </div>
-  <div class="sub">повторень</div>
+  <div class="sub">reps</div>
   <div id="p_conf"></div>
-  <div class="hint" style="margin-top:10px">Яка це вправа?</div>
+  <div class="hint" style="margin-top:10px">Which exercise was this?</div>
   <div class="exlist" id="p_exlist"></div>
-  <div class="row" style="border:0"><input type="text" id="p_new" placeholder="або впиши нову назву"></div>
+  <div class="row" style="border:0"><input type="text" id="p_new" placeholder="or type a new name"></div>
   <div class="row" style="border:0">
-    <span class="btn ok" id="p_save" style="flex:2">Зберегти</span>
-    <span class="btn" id="p_drop" style="flex:1">Викинути</span>
+    <span class="btn ok" id="p_save" style="flex:2">Save</span>
+    <span class="btn" id="p_drop" style="flex:1">Discard</span>
   </div>
-  <div id="p_learn"></div>
 </div></div>
 
 <div class="sheet" id="cfg"><div class="sheetin">
-  <h2>Налаштування<span class="sp"></span><span class="btn gh sq" id="cfgX" style="width:40px;padding:8px 0">✕</span></h2>
-  <div class="row"><label>Аудіо<small>«Тільки піски» не чіпає музику</small></label>
-    <select id="oAudio"><option value="beep">Тільки піски</option><option value="voice">Голос + піски</option><option value="off">Вимкнено</option></select></div>
-  <div class="row"><label>Гучність</label><input type="range" id="oVol" min="0" max="100" value="30"></div>
-  <div class="row"><label>Екран не гасне</label><div class="sw on" id="oWake"></div></div>
-  <div class="row"><label>Відпочинок, с</label><input type="number" id="oRest" value="90" min="10" max="600" step="5"></div>
-  <div class="row"><label>Питати підтвердження<small>коли апка не впевнена в підрахунку</small></label><div class="sw on" id="oAsk"></div></div>
-  <div class="row"><label>Мін. час опускання, с</label><input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
-  <div class="row"><label>Авто-стоп підходу, с<small>тиша довше — підхід завершиться сам</small></label>
-    <input type="number" id="oIdle" value="12" min="4" max="60" step="1"></div>
-  <div class="row"><span class="btn" id="bEndWk" style="flex:1">Завершити тренування</span></div>
-  <div class="row"><span class="btn dan" id="bWipe" style="flex:1">Стерти всі дані</span></div>
+  <h2>Settings<span class="sp"></span><span class="btn gh sq" id="cfgX" style="width:40px;padding:8px 0">✕</span></h2>
+  <div class="row"><label>Audio<small>“Beeps only” never ducks your music</small></label>
+    <select id="oAudio"><option value="beep">Beeps only</option><option value="voice">Voice + beeps</option><option value="off">Off</option></select></div>
+  <div class="row"><label>Volume</label><input type="range" id="oVol" min="0" max="100" value="30"></div>
+  <div class="row"><label>Keep screen awake</label><div class="sw on" id="oWake"></div></div>
+  <div class="row"><label>Rest timer, s</label><input type="number" id="oRest" value="90" min="10" max="600" step="5"></div>
+  <div class="row"><label>Always confirm rep count<small>keep ON while collecting training data — every confirmation teaches the counter</small></label><div class="sw on" id="oAsk"></div></div>
+  <div class="row"><label>Min eccentric time, s</label><input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
+  <div class="row"><label>Auto-stop set after, s<small>stillness longer than this ends the set</small></label>
+    <input type="number" id="oIdle" value="15" min="4" max="90" step="1"></div>
+  <div class="row"><span class="btn" id="bEndWk" style="flex:1">Finish workout</span></div>
+  <div class="row"><span class="btn dan" id="bWipe" style="flex:1">Erase all data</span></div>
   <div class="hint" style="margin-top:12px">
-    <b>Кнопка на кришці:</b><br>
-    1 клік — почати / завершити підхід<br>
-    2 кліки — скасувати підхід (не рахувати)<br>
-    утримати ~1.2 с — завершити тренування<br><br>
-    Поза підходом апка нічого не рахує — тому ходьба між тренажерами
-    й підняття снаряда не потрапляють у статистику.<br><br>
-    <b>iOS:</b> потрібен <b>Bluefy</b>. Не видно Triki — розбуди кнопкою.
+    <b>Button on the cap:</b><br>
+    1 click — start / finish a set<br>
+    2 clicks — cancel the set (don't count it)<br>
+    hold ~1.2 s — finish the workout<br><br>
+    Nothing is counted outside a set, so walking between machines and
+    racking the weight never reach your stats.<br><br>
+    <b>iOS:</b> needs the <b>Bluefy</b> browser. If Triki doesn't show up, press its
+    button to wake it first.
   </div>
 </div></div>
 
 <div class="sheet" id="exp"><div class="sheetin">
-  <h2>CSV<span class="sp"></span><span class="btn gh sq" id="expX" style="width:40px;padding:8px 0">✕</span></h2>
+  <h2>Export<span class="sp"></span><span class="btn gh sq" id="expX" style="width:40px;padding:8px 0">✕</span></h2>
+  <div class="hint">Select all and copy, or use the button below.</div>
   <textarea class="exp" id="expT" readonly></textarea>
-  <div class="btn prim" id="expCopy" style="margin-top:10px">Скопіювати</div>
+  <div class="btn prim" id="expCopy" style="margin-top:10px">Copy</div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -285,89 +294,137 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════════
-   IronCap v3
+   IronCap — turning a Zabka "Triki" BLE puck into a gym rep counter.
+   Single-file Web Bluetooth PWA. Everything runs on the phone.
 
-   Три зміни порівняно з v2, усі за підсумками розмічених записів:
+   HOW COUNTING WORKS
 
-   1. ПІДХІД ТЕПЕР ЯВНИЙ. Лічильник працює лише між «почати» і
-      «завершити». Ходьба між тренажерами, підняття снаряда і
-      вставання з крісла більше не можуть потрапити в підрахунок —
-      не порогами, а за побудовою. На тих записах саме ці ділянки
-      давали всі хибні спрацювання.
+   The puck reports 3-axis accelerometer + gyroscope at ~60 Hz. Vertical
+   motion is extracted by projecting linear acceleration onto the gravity
+   direction, so the puck can be mounted in ANY orientation — magnet on a
+   weight stack, on a plate, on the bar, even clipped to a hat.
 
-   2. БІБЛІОТЕКА ВПРАВ. Кожна вправа зберігає власні параметри
-      детектора. Кріплення (гриф / блок / збоку) значення не має:
-      вертикаль береться з напрямку гравітації.
+   Counting deliberately does NOT integrate acceleration into velocity
+   and then look for movement cycles. A real 888-second capture showed
+   that integrator reaching 15.4 m/s where a real barbell peaks near 2,
+   because inter-frame gaps hit 423 ms while acceleration hit 10.7 g.
+   That produced reps counted in bursts several per second.
 
-   3. НАВЧАННЯ З ВИПРАВЛЕНЬ. Сирий сигнал підходу зберігається. Коли
-      ти кажеш «було 10, а не 9», апка переганяє ЦЕЙ САМИЙ сигнал
-      через перебір параметрів і шукає ті, що дають 10 — перевіряючи
-      їх одночасно на всіх попередніх розмічених підходах цієї вправи.
-      Це не нейромережа, а підгонка параметрів під твою розмітку:
-      працює з одного прикладу, пояснювана і не потребує сервера.
+   Instead a rep is one oscillation cycle of a PSEUDO-VELOCITY signal:
+       band-pass(acceleration) -> integrate -> band-pass again
+   The second band-pass kills integrator drift, and integrating removes a
+   subtle trap: vertical acceleration has TWO positive lobes per squat
+   (accelerate + decelerate in each phase), so counting cycles directly on
+   acceleration double-counts. After integration there is exactly one
+   cycle per rep. On labelled data this cut total error from 26 to 10 and
+   false positives while walking from 18 to 2.
+
+   A rep is emitted on each upward zero-crossing that follows a downward
+   one — including the very first. (An earlier version only opened a cycle
+   on the first crossing, so 10 reps always reported 9.)
+
+   SETS ARE EXPLICIT. Counting only runs between "start" and "finish".
+   Walking between machines, picking the weight up and sitting back down
+   cannot be counted — by construction rather than by thresholds. On the
+   labelled captures those transitions were the source of every single
+   false positive.
+
+   LEARNING FROM CORRECTIONS. Each exercise stores its own detector
+   parameters plus the raw traces of its labelled sets. When you correct a
+   count, a grid search looks for parameters that reproduce the true count
+   across ALL labelled sets of that exercise at once. Among equally
+   accurate candidates it picks the most CONSERVATIVE one, because
+   corrections only ever supply positive examples and without that
+   tie-break the search drifts toward over-sensitivity.
+   This is parameter fitting, not a neural network — chosen deliberately:
+   it works from a single example, runs in ~100 ms in a phone browser, and
+   you can read exactly which numbers changed and why.
    ══════════════════════════════════════════════════════════════════════ */
 
+const APP_VERSION='4.0';
+
 const NUS='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const C_W='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
-const C_N='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-const C_LED='6e400004-b5a3-f393-e0a9-e50e24dcca9e';
+const C_W='6e400002-b5a3-f393-e0a9-e50e24dcca9e';   // write / RX
+const C_N='6e400003-b5a3-f393-e0a9-e50e24dcca9e';   // notify / TX
+const C_LED='6e400004-b5a3-f393-e0a9-e50e24dcca9e'; // LED, bit 0
 const INIT1=Uint8Array.of(0x01,0x00);
-const INIT2=Uint8Array.of(0x20,0x10,0x00,0xD0,0x07,0x68,0x00,0x03);
-const ACC_LSB=2048.0, GYR_LSB=131.0, G_MS2=9.80665;
+const INIT2=Uint8Array.of(0x20,0x10,0x00,0xD0,0x07,0x68,0x00,0x03); // byte 5 = ODR, 0x68 = 104 Hz
+const ACC_LSB=2048.0;   // LSB per g   (+-16 g range)
+const GYR_LSB=131.0;    // LSB per deg/s
+const G_MS2=9.80665;
 const DT_MIN=0.004, DT_MAX=0.20, GAP_RESET=0.35;
-const DEF={sens:0.90, perMin:0.70, floor:0.048};   // підібрано на розмічених даних
+const DEF={sens:0.90, perMin:0.70, floor:0.048};   // fitted on labelled squat data
 const PER_MAX=9.0;
+
+const SUGGESTED=['Squat','Romanian deadlift','Leg press','Leg curl','Leg extension',
+                 'Calf raise','Bench press','Row','Biceps curl','Triceps pushdown',
+                 'Shoulder press','Lat pulldown'];
 
 const $=id=>document.getElementById(id);
 const now=()=>performance.now()/1000;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:12};
-try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg3')||'{}'));}catch(e){}
-const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg3',JSON.stringify(CFG));}catch(e){}};
+const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:15};
+try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg4')||'{}'));}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));}catch(e){}};
 
-/* ══ БАЗА: вправи + тренування ══ */
-let DB={ex:{},wk:[]};
-try{ const d=JSON.parse(localStorage.getItem('ironcap.db')||'null'); if(d&&d.ex) DB=d; }catch(e){}
+/* ══ PERSISTENT STORE ══
+   ex   : exercise library (detector params + labelled traces)
+   wk   : finished workouts
+   cur  : the workout in progress — persisted so a reload mid-session
+          never loses the day
+   res  : research log, every set with its raw trace                      */
+let DB={ex:{},wk:[],cur:null,res:[]};
+try{ const d=JSON.parse(localStorage.getItem('ironcap.db')||'null');
+     if(d&&d.ex){ DB=Object.assign({ex:{},wk:[],cur:null,res:[]},d); } }catch(e){}
+
 function saveDB(){
-  try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); }
-  catch(e){ // переповнення — викидаємо найстаріші сирі сигнали
-    for(const k in DB.ex){ const s=DB.ex[k].samples||[]; while(s.length>2) s.shift(); }
-    try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); }catch(e2){ toast('Пам\'ять переповнена'); }
+  try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); return true; }
+  catch(e){
+    // Storage is full. Drop raw traces oldest-first — never drop counts.
+    let freed=false;
+    while(DB.res.length>10){ const r=DB.res.shift(); if(r&&r.raw) freed=true; }
+    for(const k in DB.ex){ const s=DB.ex[k].samples||[]; while(s.length>3){ s.shift(); freed=true; } }
+    try{ localStorage.setItem('ironcap.db',JSON.stringify(DB));
+         if(freed) toast('Storage was full — oldest raw traces dropped'); return true; }
+    catch(e2){
+      for(const r of DB.res) delete r.raw;
+      try{ localStorage.setItem('ironcap.db',JSON.stringify(DB));
+           toast('Storage full — raw traces dropped, counts kept'); return true; }
+      catch(e3){ toast('Cannot save: storage full'); return false; }
+    }
   }
 }
 
-/* ══ ДЕТЕКТОР — один і той самий код для живого і для перебору ══
-   Саме це гарантує, що навчання підбирає параметри для того самого
-   алгоритму, який потім рахує наживо.                              */
+/* ══ DETECTOR ══
+   The very same code runs live and during offline re-tuning. That is what
+   guarantees the parameters we fit are the parameters that will count.  */
 function makeDetector(p){
   const P=Object.assign({},DEF,p||{});
   let fast=0,slow=0,pv=0,pvHi=0,pvLo=0,rms=0,st=0,tFlip=0,tCycle=0,tDown=0,last=-99;
   let halfUp=0,halfDn=0;
   return {
-    thr:0, sig:0,
+    thr:0, sig:0, params:P,
     reset(){ fast=slow=pv=pvHi=pvLo=0; st=0; tCycle=0; tDown=0; },
-    /* повертає {rep:true, per, ecc} на завершенні повного циклу */
+    /* returns {rep:true, per, ecc} when a full cycle completes */
     push(aV,dt,t,gap){
       if(gap) this.reset();
-      fast+=(1-Math.exp(-dt/0.12))*(aV-fast);
-      slow+=(1-Math.exp(-dt/1.2))*(aV-slow);
+      fast+=(1-Math.exp(-dt/0.12))*(aV-fast);   // de-noise
+      slow+=(1-Math.exp(-dt/1.2))*(aV-slow);    // de-drift
       const acc=fast-slow;
-      pv  += acc*G_MS2*dt;
+      pv  += acc*G_MS2*dt;                      // -> pseudo-velocity
       pvHi+= (1-Math.exp(-dt/1.0))*(pv-pvHi);
       pvLo+= (1-Math.exp(-dt/0.10))*(pv-pvLo);
       const sig=pvLo-pvHi; this.sig=sig;
       rms+=(1-Math.exp(-dt/3.0))*(sig*sig-rms);
       const thr=Math.max(P.floor,Math.sqrt(Math.max(rms,1e-9))*P.sens); this.thr=thr;
       let out=null;
-      // Повтор = спуск, а потім підйом. Зараховуємо на перетині ВГОРУ,
-      // що йде після спуску — включно з найпершим. Раніше найперший
-      // лише відкривав цикл, тому 10 повторів давали рівно 9.
-      if(st<=0 && sig>thr){
+      if(st<=0 && sig>thr){                     // crossing upward
         if(st===-1){
           halfDn=t-tFlip;
-          // період: від попереднього підйому, а для найпершого —
-          // подвоєна тривалість спуску (інших даних ще немає)
+          // period from the previous ascent; for the very first rep there
+          // is no previous one, so estimate it as twice the descent
           const per = tCycle>0 ? t-tCycle : (t-tDown)*2;
           if(per>=P.perMin && per<=PER_MAX && t-last>=P.perMin){
             last=t; out={rep:true,per:per,ecc:Math.max(halfUp,halfDn)};
@@ -375,7 +432,7 @@ function makeDetector(p){
           tCycle=t;
         }
         st=1; tFlip=t;
-      } else if(st>=0 && sig<-thr){
+      } else if(st>=0 && sig<-thr){             // crossing downward
         if(st===1) halfUp=t-tFlip;
         tDown=t; st=-1; tFlip=t;
       }
@@ -384,14 +441,13 @@ function makeDetector(p){
     }
   };
 }
-/* офлайн-прогін збереженого сигналу */
+/* replay a stored trace: rec is [[dt_ms, aV_g], ...] */
 function countOffline(rec,p){
-  const d=makeDetector(p); const reps=[];
-  let t=0;
+  const d=makeDetector(p); const reps=[]; let t=0;
   for(let i=0;i<rec.length;i++){
-    const dt=rec[i][0]/1000, aV=rec[i][1];
+    const dt=rec[i][0]/1000;
     t+=dt;
-    const r=d.push(aV,clamp(dt,DT_MIN,DT_MAX),t,dt>GAP_RESET);
+    const r=d.push(rec[i][1],clamp(dt,DT_MIN,DT_MAX),t,dt>GAP_RESET);
     if(r) reps.push({t:t,per:r.per,ecc:r.ecc});
   }
   return reps;
@@ -399,17 +455,20 @@ function countOffline(rec,p){
 
 const S={
   mode:0, dev:null, chW:null, chLed:null, connected:false,
-  tLast:0, hz:0, pkTotal:0, pkFrames:0,
+  tLast:0, hz:0, pkTotal:0, pkFrames:0, lastFrame:0,
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
   aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
   det:null, live:false, setT0:0, setRec:[], setReps:[], lastMove:0,
-  wk:null, log:[], t0:now(), running:false,
+  log:[], running:false,
   btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false,
   restOn:false, restLeft:0, restFrozen:false,
-  pend:null, pendN:0, pendEx:null
+  pend:null, pendN:0, pendAuto:0, pendEx:null
 };
 
-/* ══ АУДІО (ambient — щоб музика не спинялась) ══ */
+/* ══ AUDIO ══
+   Hard requirement: app sound must never stop the user's music, only sit
+   on top of it. audioSession 'ambient' + a low master gain does that.
+   iOS SpeechSynthesis can still duck audio, hence the "beeps only" mode. */
 let AC=null,MASTER=null;
 function audioInit(){ if(AC)return;
   try{ if(navigator.audioSession) navigator.audioSession.type='ambient'; }catch(e){}
@@ -425,16 +484,16 @@ function beep(f=880,d=.09,type='sine',g=1){
   gn.gain.exponentialRampToValueAtTime(.0001,t+d);
   o.connect(gn);gn.connect(MASTER);o.start(t);o.stop(t+d+.02);
 }
-const sfxRep=()=>beep(1180,.07,'sine',.9);
-const sfxSlow=()=>{beep(320,.13,'square',.8);setTimeout(()=>beep(320,.13,'square',.8),150);};
+const sfxRep  =()=>beep(1180,.07,'sine',.9);
+const sfxSlow =()=>{beep(320,.13,'square',.8);setTimeout(()=>beep(320,.13,'square',.8),150);};
 const sfxStart=()=>{beep(520,.09);setTimeout(()=>beep(780,.12),100);};
-const sfxStop=()=>{beep(780,.09);setTimeout(()=>beep(520,.14),100);};
-const sfxGo=()=>{beep(880,.13);setTimeout(()=>beep(1320,.2),150);};
+const sfxStop =()=>{beep(780,.09);setTimeout(()=>beep(520,.14),100);};
+const sfxGo   =()=>{beep(880,.13);setTimeout(()=>beep(1320,.2),150);};
 let lastSay=0;
 function say(txt,force){
   if(CFG.audio!=='voice')return;
   const t=now(); if(!force&&t-lastSay<1.2)return; lastSay=t;
-  try{const u=new SpeechSynthesisUtterance(txt);u.lang='uk-UA';u.rate=1.12;
+  try{const u=new SpeechSynthesisUtterance(txt);u.lang='en-US';u.rate=1.1;
       u.volume=clamp(CFG.vol/100+.15,0,1);speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
 }
 let ledS=0,ledB=false;
@@ -442,19 +501,19 @@ function led(v){v=v?1:0;if(!S.chLed||ledS===v||ledB)return;ledS=v;ledB=true;
   S.chLed.writeValue(Uint8Array.of(v)).catch(()=>{}).then(()=>{ledB=false;});}
 let tT=0;
 function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');
-  clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),2000);}
+  clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('on'),2200);}
 
 /* ══ BLE ══ */
 async function connect(){
-  if(!navigator.bluetooth){toast('Потрібен Bluefy — Safari не вміє Web Bluetooth');return;}
+  if(!navigator.bluetooth){toast('Web Bluetooth unavailable — use Bluefy on iOS');return;}
   audioResume();
-  try{ setStat('шукаю…','warn');
+  try{ setStat('scanning…','warn');
     const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[NUS,'battery_service']});
     S.dev=dev; dev.addEventListener('gattserverdisconnected',onDisc); await attach(dev);
-  }catch(e){ setStat('не підключено'); if(e&&e.name!=='NotFoundError') toast('Помилка: '+(e.message||e)); }
+  }catch(e){ setStat('not connected'); if(e&&e.name!=='NotFoundError') toast('Error: '+(e.message||e)); }
 }
 async function attach(dev){
-  setStat('підключаюсь…','warn');
+  setStat('connecting…','warn');
   const srv=await dev.gatt.connect();
   const nus=await srv.getPrimaryService(NUS);
   const nt=await nus.getCharacteristic(C_N);
@@ -467,9 +526,9 @@ async function attach(dev){
   try{ await wr(INIT2); }catch(e){}
   S.connected=true; S.running=true;
   setStat(dev.name||'Triki','on');
-  $('bConn').innerHTML='Відключити<span class="s">'+((dev.name||'Triki').slice(0,12))+'</span>';
+  $('bConn').innerHTML='Disconnect<span class="s">'+esc((dev.name||'Triki').slice(0,12))+'</span>';
   $('bConn').classList.replace('prim','dan');
-  battery(srv); wakeLock(); say('Підключено');
+  battery(srv); wakeLock(); say('Connected');
 }
 async function battery(srv){
   try{const bs=await srv.getPrimaryService('battery_service');
@@ -479,19 +538,26 @@ async function battery(srv){
     bc.addEventListener('characteristicvaluechanged',e=>u(e.target.value.getUint8(0)));}catch(e){}
 }
 function onDisc(){
-  S.connected=false; setStat('зв\'язок втрачено','err'); toast('Triki відключився');
-  $('bConn').innerHTML='Підключити<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
-  say('Зв\'язок втрачено',true);
+  S.connected=false; setStat('link lost','err');
+  $('bConn').innerHTML='Connect<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
+  // A set in progress would silently stall, so close it and keep the reps.
+  if(S.live){ toast('Link lost — set closed, reps kept'); say('Link lost',true); endSet(true); }
+  else { toast('Triki disconnected'); say('Link lost',true); }
   if(S.dev) setTimeout(()=>{ if(!S.connected&&S.dev) attach(S.dev).catch(()=>{}); },2500);
 }
 function disconnect(){
   try{S.dev&&S.dev.gatt&&S.dev.gatt.connected&&S.dev.gatt.disconnect();}catch(e){}
-  S.connected=false; setStat('не підключено');
-  $('bConn').innerHTML='Підключити<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
+  S.connected=false; setStat('not connected');
+  $('bConn').innerHTML='Connect<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
 }
 function setStat(t,c){ $('stat').textContent=t; $('dot').className='dot'+(c?' '+c:''); }
 
-/* ══ ПАРСЕР ══ */
+/* ══ FRAME PARSER ══
+   14-byte frame: [0]=0x22, [1]=button (0/1), [2..7] gyro XYZ int16 LE,
+   [8..13] accel XYZ int16 LE. Notifications arrive as bursts of several
+   frames at arbitrary offsets, so scan for the header rather than reading
+   fixed offsets. Accepting BOTH 22 00 and 22 01 matters: every frame is
+   22 01 while the button is held.                                        */
 function onNotify(e){
   const dv=e.target.value,n=dv.byteLength; S.pkTotal++;
   let i=0;
@@ -502,7 +568,7 @@ function onNotify(e){
 }
 function frame(dv,o,btn){
   const t=now();
-  let raw=S.tLast?t-S.tLast:0.016; S.tLast=t;
+  let raw=S.tLast?t-S.tLast:0.016; S.tLast=t; S.lastFrame=t;
   const gap=raw>GAP_RESET, dt=clamp(raw,DT_MIN,DT_MAX);
   S.hz+=.02*(1/dt-S.hz); S.pkFrames++;
   const g=[dv.getInt16(o,true),dv.getInt16(o+2,true),dv.getInt16(o+4,true)];
@@ -511,15 +577,20 @@ function frame(dv,o,btn){
   physics(a,g,dt,t,gap,raw);
 }
 
-/* ══ ФІЗИКА ══ */
+/* ══ PHYSICS ══ */
 function physics(a,g,dt,t,gap,raw){
   if(!S.gInit){ S.grav=[a[0],a[1],a[2]]; S.gyBias=[g[0],g[1],g[2]]; S.gInit=true; }
+  // Adaptive gravity estimate: fast while still (locks a new orientation
+  // instantly), slow while moving (otherwise it tracks the rep itself and
+  // eats its amplitude). This is what makes mounting orientation-free.
   const tauG=(S.stillT>.25)?0.3:2.0;
   const kG=1-Math.exp(-dt/tauG);
   for(let i=0;i<3;i++) S.grav[i]+=kG*(a[i]-S.grav[i]);
   const lin=[a[0]-S.grav[0],a[1]-S.grav[1],a[2]-S.grav[2]];
   const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
   S.motion=Math.hypot(lin[0],lin[1],lin[2])/S.gn;
+  // Instantaneous acceleration is ZERO at peak velocity, twice per rep, so
+  // "is it still?" must be judged over a window, never on one sample.
   S.motionEma+=(1-Math.exp(-dt/0.6))*(S.motion-S.motionEma);
   if(S.motionEma<.03&&S.motion<.05){ for(let i=0;i<3;i++) S.gyBias[i]+=.04*(g[i]-S.gyBias[i]); }
   S.gyRate+=.25*(Math.hypot(g[0]-S.gyBias[0],g[1]-S.gyBias[1],g[2]-S.gyBias[2])/GYR_LSB-S.gyRate);
@@ -529,35 +600,33 @@ function physics(a,g,dt,t,gap,raw){
     if(mx>gl*.85){ S.capAxis=ix; S.capSign=S.grav[ix]>0?1:-1; }
   } else S.stillT=0;
 
-  // вертикаль — з напрямку гравітації, тому кріплення довільне
-  const u=[S.grav[0]/gl,S.grav[1]/gl,S.grav[2]/gl];
-  S.aV=(lin[0]*u[0]+lin[1]*u[1]+lin[2]*u[2])/S.gn;
+  S.aV=(lin[0]*S.grav[0]+lin[1]*S.grav[1]+lin[2]*S.grav[2])/gl/S.gn;
 
   if(S.live){
     S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4)]);
     const r=S.det.push(S.aV,dt,t,gap);
     if(r) onRep(r,t);
     if(!still) S.lastMove=t;
-    if(t-S.lastMove>CFG.idle) endSet(true);      // авто-стоп на тиші
-  } else if(S.det){ S.det.push(S.aV,dt,t,gap); } // тримаємо фільтри теплими
+    if(t-S.lastMove>CFG.idle) endSet(true);
+  } else if(S.det){ S.det.push(S.aV,dt,t,gap); }   // keep filters warm
 
   restLogic(dt,t);
   charts();
-  if(S.running&&S.log.length<160000&&(S.pkFrames&1)===0)
+  if(S.running&&S.log.length<200000&&(S.pkFrames&1)===0)
     S.log.push([Date.now(),+S.aV.toFixed(4),+(S.det?S.det.sig:0).toFixed(4),
                 +(S.det?S.det.thr:0).toFixed(4),S.live?S.setReps.length:0]);
 }
 
-/* ══ ПІДХІД ══ */
+/* ══ SET LIFECYCLE ══ */
 function startSet(){
   if(S.live) return;
-  if(!S.connected && !demoT){ toast('Спершу підключи Triki'); beep(300,.12); return; }
+  if(!S.connected && !demoT){ toast('Connect Triki first'); beep(300,.12); return; }
   S.live=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
   S.det=makeDetector(currentParams());
-  sfxStart(); say('Пішли',true); led(true);
-  $('goLive').innerHTML='ЗАВЕРШИТИ ПІДХІД<span>клік кнопкою · 2 кліки — скасувати</span>';
+  sfxStart(); say('Go',true); led(true);
+  $('goLive').innerHTML='FINISH SET<span>1 click · 2 clicks to cancel</span>';
   $('goLive').classList.add('stop');
-  $('bSet').innerHTML='Завершити<span class="s">підхід</span>';
+  $('bSet').innerHTML='Finish set<span class="s">1 click on cap</span>';
   $('l_reps').classList.remove('idle');
 }
 function currentParams(){
@@ -567,37 +636,35 @@ function currentParams(){
 function onRep(r,t){
   S.setReps.push({t:t,per:r.per,ecc:r.ecc});
   sfxRep();
-  if(r.ecc>0 && r.ecc<CFG.ecc) setTimeout(()=>{sfxSlow();say('Повільніше');},120);
+  if(r.ecc>0 && r.ecc<CFG.ecc) setTimeout(()=>{sfxSlow();say('Slower');},120);
 }
 function cancelSet(){
   if(!S.live) return;
-  S.live=false; led(false); sfxStop(); toast('Підхід скасовано');
-  resetLiveUI();
+  S.live=false; led(false); sfxStop(); toast('Set cancelled'); resetLiveUI();
 }
 function resetLiveUI(){
-  $('goLive').innerHTML='ПОЧАТИ ПІДХІД<span>або клік кнопкою на кришці</span>';
+  $('goLive').innerHTML='START SET<span>or click the button on the cap</span>';
   $('goLive').classList.remove('stop');
-  $('bSet').innerHTML='Почати підхід<span class="s">1 клік кнопкою</span>';
+  $('bSet').innerHTML='Start set<span class="s">1 click on cap</span>';
   $('l_reps').classList.add('idle');
 }
 function endSet(auto){
   if(!S.live) return;
-  S.live=false; led(false);
+  S.live=false; led(false); resetLiveUI();
   const dur=now()-S.setT0, n=S.setReps.length;
-  resetLiveUI();
-  if(n<1){ toast(auto?'Підхід порожній — скасовано':'Жодного повтору'); beep(300,.12); return; }
+  if(n<1){ toast(auto?'Empty set — discarded':'No reps detected'); beep(300,.12); return; }
   sfxStop();
   S.pend={reps:S.setReps.slice(),rec:S.setRec.slice(),dur:dur,ts:Date.now()};
-  S.pendN=n;
-  const c=confidence(S.setReps,S.pendEx);
-  S.pend.conf=c;
-  say(n+' повторень',true);
-  // впевнені + вправа відома + дозволено — пишемо мовчки
-  if(c>=0.80 && S.pendEx && !CFG.ask){ commitSet(S.pendEx,n,false); return; }
-  if(c>=0.80 && S.pendEx){ commitSet(S.pendEx,n,false); return; }
+  S.pendN=n; S.pendAuto=n;
+  S.pend.conf=confidence(S.setReps,S.pendEx);
+  say(n+' reps',true);
+  // Silent save only when we are confident, the exercise is known AND the
+  // user has switched confirmation off. While collecting data, keep it on.
+  if(!CFG.ask && S.pend.conf>=0.80 && S.pendEx){ commitSet(S.pendEx,n,false); return; }
   openPost();
 }
-/* впевненість: рівність ритму + збіг із відомим темпом вправи */
+/* confidence = rhythm regularity, tightened by agreement with the
+   exercise's known tempo */
 function confidence(reps,exName){
   if(reps.length<3) return 0.35;
   const iv=[]; for(let i=1;i<reps.length;i++) iv.push(reps[i].t-reps[i-1].t);
@@ -609,25 +676,24 @@ function confidence(reps,exName){
   return c;
 }
 
-/* ══ ЛИСТ ПІСЛЯ ПІДХОДУ ══ */
+/* ══ POST-SET SHEET ══ */
 function openPost(){
   $('pm_n').textContent=S.pendN;
   const c=S.pend.conf;
   $('p_conf').innerHTML = c>=0.8
-    ? '<div class="conf hi">Ритм рівний — швидше за все підрахунок правильний. Якщо ні, виправ і я перевчуся.</div>'
-    : '<div class="conf lo">Ритм нерівний, я не впевнений. Постав справжню кількість — саме з таких виправлень я і вчуся.</div>';
-  const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
-  $('p_exlist').innerHTML=names.map(n=>{
-    const e=DB.ex[n];
-    return '<div class="exopt'+(n===S.pendEx?' sel':'')+'" data-ex="'+esc(n)+'">'+esc(n)
-      +'<small>'+(e.used||0)+' підходів · '+(e.labels||0)+' виправлень'
-      +(e.per?(' · '+e.per.toFixed(1)+' с/повт'):'')+'</small></div>';
-  }).join('')||'<div class="hint">Ще жодної вправи — впиши назву нижче.</div>';
+    ? '<div class="conf hi">Even rhythm — the count is probably right. If it isn\'t, fix it and I\'ll re-learn.</div>'
+    : '<div class="conf lo">Uneven rhythm, I\'m not sure. Set the true number — corrections are exactly what I learn from.</div>';
+  const known=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
+  const rest=SUGGESTED.filter(n=>!DB.ex[n]);
+  $('p_exlist').innerHTML=
+    known.map(n=>{const e=DB.ex[n];
+      return '<div class="exopt'+(n===S.pendEx?' sel':'')+'" data-ex="'+esc(n)+'">'+esc(n)
+        +'<small>'+(e.used||0)+' sets · '+(e.labels||0)+' corrections'
+        +(e.per?(' · '+e.per.toFixed(1)+'s/rep'):'')+'</small></div>';}).join('')
+    + rest.map(n=>'<div class="exopt" data-ex="'+esc(n)+'" style="opacity:.62">'+esc(n)+'<small>new</small></div>').join('');
   $('p_new').value='';
-  $('p_learn').innerHTML='';
   $('post').classList.add('on');
 }
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function commitSet(exName,n,corrected){
   const p=S.pend; if(!p) return;
@@ -635,27 +701,35 @@ function commitSet(exName,n,corrected){
   const ex=DB.ex[exName];
   ex.used=(ex.used||0)+1;
   const iv=[]; for(let i=1;i<p.reps.length;i++) iv.push(p.reps[i].t-p.reps[i-1].t);
-  if(iv.length){ const m=iv.reduce((a,b)=>a+b,0)/iv.length;
-    ex.per=ex.per?ex.per*0.7+m*0.3:m; }
-  if(!S.wk) S.wk={start:Date.now(),sets:[]};
-  const ecc=p.reps.map(r=>r.ecc).filter(x=>x>0);
-  S.wk.sets.push({ex:exName,reps:n,dur:Math.round(p.dur),ts:p.ts,man:corrected,
-    ecc:ecc.length?+(ecc.reduce((a,b)=>a+b,0)/ecc.length).toFixed(1):0});
+  if(iv.length){ const m=iv.reduce((a,b)=>a+b,0)/iv.length; ex.per=ex.per?ex.per*0.7+m*0.3:m; }
+  if(!DB.cur) DB.cur={start:Date.now(),sets:[]};
+  const eccs=p.reps.map(r=>r.ecc).filter(x=>x>0);
+  DB.cur.sets.push({ex:exName,reps:n,dur:Math.round(p.dur),ts:p.ts,man:corrected,
+    ecc:eccs.length?+(eccs.reduce((a,b)=>a+b,0)/eccs.length).toFixed(1):0});
+
+  // research log — every set, labelled, with its raw trace
+  const trace=downsample(p.rec);
+  DB.res.push({ts:p.ts,ex:exName,auto:S.pendAuto,truth:n,corrected:corrected,
+    conf:+p.conf.toFixed(2),dur:Math.round(p.dur),hz:Math.round(S.hz),
+    params:Object.assign({},ex.params),raw:trace});
+  while(DB.res.length>120) DB.res.shift();
+
   let msg='';
   if(corrected){
     ex.labels=(ex.labels||0)+1;
     ex.samples=ex.samples||[];
-    ex.samples.push({rec:downsample(p.rec),truth:n});
-    while(ex.samples.length>6) ex.samples.shift();     // пам'ять не безмежна
+    ex.samples.push({rec:trace,truth:n});
+    while(ex.samples.length>6) ex.samples.shift();
     msg=retune(exName);
   }
   S.pendEx=exName; S.pend=null;
   saveDB(); renderWk(); renderHist();
   $('post').classList.remove('on');
-  toast(exName+': '+n+' повторень');
-  if(msg) setTimeout(()=>toast(msg),2200);
+  toast(exName+': '+n+' reps');
+  if(msg) setTimeout(()=>toast(msg),2400);
   startRest();
 }
+/* halve the sample rate to keep stored traces small */
 function downsample(rec){
   const out=[]; let acc=0;
   for(let i=0;i<rec.length;i++){ acc+=rec[i][0];
@@ -663,10 +737,7 @@ function downsample(rec){
   return out;
 }
 
-/* ══ НАВЧАННЯ: підбір параметрів під ТВОЮ розмітку ══
-   Перебираємо сітку і шукаємо параметри, які дають правильну
-   кількість на ВСІХ розмічених підходах цієї вправи, а не лише
-   на останньому. За рівних результатів беремо найближчі до типових. */
+/* ══ LEARNING FROM CORRECTIONS ══ */
 function retune(exName){
   const ex=DB.ex[exName], sm=ex.samples||[];
   if(!sm.length) return '';
@@ -677,10 +748,9 @@ function retune(exName){
         const p={sens:+sens.toFixed(2),perMin:+pm.toFixed(2),floor:+fl.toFixed(3)};
         let err=0;
         for(const s of sm) err+=Math.abs(countOffline(s.rec,p).length-s.truth);
-        // Серед однаково точних беремо НАЙКОНСЕРВАТИВНІШІ: вищий поріг
-        // чутливості й вища підлога. Розмічені підходи дають лише
-        // позитивні приклади, тож без цього перебір повзе в бік
-        // надчутливості й починає ловити сторонній рух.
+        // Among equally accurate candidates prefer the most conservative
+        // one. Corrections only ever give positive examples, so without
+        // this the search slides into over-sensitivity.
         const cons=p.sens+p.floor*10+p.perMin*0.3;
         if(!best||err<best.err||(err===best.err&&cons>best.cons)) best={p:p,err:err,cons:cons};
       }
@@ -690,32 +760,32 @@ function retune(exName){
   ex.params=best.p;
   const tot=sm.reduce((a,s)=>a+s.truth,0);
   return best.err===0
-    ? 'Вивчив «'+exName+'»: тепер сходиться на всіх '+sm.length+' розмічених підходах'
-    : 'Вивчив «'+exName+'»: похибка '+best.err+' з '+tot+' повторів';
+    ? 'Learned "'+exName+'": now exact on all '+sm.length+' labelled set(s)'
+    : 'Learned "'+exName+'": off by '+best.err+' of '+tot+' reps';
 }
 
-/* ══ ВІДПОЧИНОК ══ */
+/* ══ REST TIMER ══ */
 function startRest(){ S.restOn=true;S.restLeft=CFG.rest;S.restFrozen=false;
-  $('rest').classList.add('on');$('rest').classList.remove('frozen','go');$('r_lbl').textContent='відпочинок'; }
+  $('rest').classList.add('on');$('rest').classList.remove('frozen','go');$('r_lbl').textContent='rest'; }
 function stopRest(done){ S.restOn=false;$('rest').classList.remove('on','frozen','go');
-  if(done){sfxGo();say('Старт',true);} }
+  if(done){sfxGo();say('Go',true);} }
 function restLogic(dt,t){
   if(!S.restOn)return;
   const gl=Math.hypot(S.grav[0],S.grav[1],S.grav[2])||1;
   const nrm=S.grav[S.capAxis]/gl;
   const fr=Math.abs(nrm)>.8&&S.stillT>.4&&(nrm*S.capSign<0);
   if(fr!==S.restFrozen){S.restFrozen=fr;$('rest').classList.toggle('frozen',fr);
-    $('r_lbl').textContent=fr?'ПАУЗА · магніт догори':'відпочинок';beep(fr?420:760,.1);}
+    $('r_lbl').textContent=fr?'PAUSED · magnet up':'rest';beep(fr?420:760,.1);}
   if(S.restFrozen)return;
   const p=S.restLeft; S.restLeft-=dt;
-  if(p>10&&S.restLeft<=10){beep(520,.12);setTimeout(()=>beep(520,.12),180);say('Готуйся',true);$('rest').classList.add('go');}
+  if(p>10&&S.restLeft<=10){beep(520,.12);setTimeout(()=>beep(520,.12),180);say('Get ready',true);$('rest').classList.add('go');}
   if(p>3&&S.restLeft<=3)beep(660,.08);
   if(p>2&&S.restLeft<=2)beep(660,.08);
   if(p>1&&S.restLeft<=1)beep(660,.08);
   if(S.restLeft<=0)stopRest(true);
 }
 
-/* ══ КНОПКА ══ */
+/* ══ CAP BUTTON — the only physical control ══ */
 function button(b,t){
   const was=S.btn; S.btn=b;
   if(b&&!was){ S.btnDown=t; S.btnLong=false; }
@@ -732,17 +802,17 @@ function button(b,t){
 }
 function endWorkout(){
   if(S.live) endSet(false);
-  if(!S.wk||!S.wk.sets.length){ toast('Тренування порожнє'); return; }
-  S.wk.end=Date.now(); DB.wk.unshift(S.wk); while(DB.wk.length>60) DB.wk.pop();
-  const n=S.wk.sets.length; S.wk=null; saveDB(); renderWk(); renderHist();
-  toast('Тренування збережено: '+n+' підходів'); say('Тренування збережено',true);
+  if(!DB.cur||!DB.cur.sets.length){ toast('Nothing to save yet'); return; }
+  DB.cur.end=Date.now(); DB.wk.unshift(DB.cur); while(DB.wk.length>60) DB.wk.pop();
+  const n=DB.cur.sets.length; DB.cur=null; saveDB(); renderWk(); renderHist();
+  toast('Workout saved: '+n+' sets'); say('Workout saved',true);
 }
 
-/* ══ ГРАФІК ══ */
-const NB=260, buf={sig:[],thr:[],av:[],mk:[]};
+/* ══ CHART ══ */
+const NB=260, buf={sig:[],thr:[],mk:[]};
 function charts(){
   const p=(k,v)=>{const b=buf[k];b.push(v);if(b.length>NB)b.shift();};
-  p('sig',S.det?S.det.sig:0); p('thr',S.det?S.det.thr:0); p('av',S.aV);
+  p('sig',S.det?S.det.sig:0); p('thr',S.det?S.det.thr:0);
   const lr=S.setReps.length?S.setReps[S.setReps.length-1].t:-99;
   p('mk',now()-lr<0.25?1:0);
 }
@@ -759,7 +829,7 @@ function draw(cv,ser){
   ser.forEach(s=>{
     const d=s.d;if(d.length<2)return;
     const off=NB-d.length;
-    const line=(sign)=>{c.beginPath();
+    const line=sign=>{c.beginPath();
       for(let i=0;i<d.length;i++){const x=(i+off)/(NB-1)*w,y=h/2-sign*clamp(d[i]/mx,-1,1)*(h/2-3);
         i?c.lineTo(x,y):c.moveTo(x,y);} c.stroke();};
     c.strokeStyle=s.c;c.lineWidth=s.w||1.8;c.lineJoin='round';
@@ -767,11 +837,10 @@ function draw(cv,ser){
   });
 }
 
-/* ══ РЕНДЕР ══ */
+/* ══ RENDER ══ */
 function renderWk(){
-  const sets=S.wk?S.wk.sets:[];
-  const byEx={};
-  sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s);});
+  const sets=DB.cur?DB.cur.sets:[];
+  const byEx={}; sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s);});
   const names=Object.keys(byEx);
   $('w_sets').textContent=sets.length;
   $('w_reps').textContent=sets.reduce((a,s)=>a+s.reps,0);
@@ -779,42 +848,42 @@ function renderWk(){
   $('w_list').innerHTML=names.length?names.map(n=>{
     const ss=byEx[n];
     return '<div class="ex"><div class="nm">'+esc(n)
-      +'<small>'+ss.length+' підход'+(ss.length===1?'':'ів')+'</small>'
+      +'<small>'+ss.length+' set'+(ss.length===1?'':'s')+'</small>'
       +'<div class="setrow">'+ss.map(s=>'<span class="pill'+(s.man?' man':'')+'">'+s.reps+'</span>').join('')+'</div>'
-      +'</div><div class="vol">'+ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">повт</span></div></div>';
-  }).join(''):'<div class="hint">Ще немає підходів. Причепи Triki і тисни «почати підхід».</div>';
+      +'</div><div class="vol">'+ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">reps</span></div></div>';
+  }).join(''):'<div class="hint">No sets yet. Attach Triki and press “start set”.</div>';
+  $('r_count').textContent=DB.res.length+' sets logged';
 }
 function renderHist(){
   const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
   $('h_ex').innerHTML=names.length?names.map(n=>{
-    const e=DB.ex[n];
-    const trained=(e.labels||0)>0;
+    const e=DB.ex[n], trained=(e.labels||0)>0;
     return '<div class="ex"><div class="nm">'+esc(n)
-      +'<small>'+(e.used||0)+' підходів · '
-      +(trained?('навчено на '+e.labels+' виправлен'+(e.labels===1?'ні':'нях')):'ще не виправлялась')
-      +(e.per?(' · '+e.per.toFixed(1)+' с/повт'):'')+'</small></div>'
+      +'<small>'+(e.used||0)+' sets · '
+      +(trained?('trained on '+e.labels+' correction'+(e.labels===1?'':'s')):'not corrected yet')
+      +(e.per?(' · '+e.per.toFixed(1)+'s/rep'):'')+'</small></div>'
       +'<div class="vol">'+(trained?'🎓':'—')+'</div></div>';
-  }).join(''):'<div class="hint">Вправ ще немає.</div>';
+  }).join(''):'<div class="hint">No exercises yet.</div>';
   $('h_wk').innerHTML=DB.wk.length?DB.wk.map(w=>{
     const d=new Date(w.start);
     const byEx={}; w.sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s.reps);});
     const mins=Math.round(((w.end||w.start)-w.start)/60000);
-    return '<div class="wk"><div class="h">'+d.toLocaleDateString('uk-UA',{day:'numeric',month:'long'})
-      +'<span class="sp"></span><span>'+w.sets.length+' підх · '
-      +w.sets.reduce((a,s)=>a+s.reps,0)+' повт · '+mins+' хв</span></div>'
+    return '<div class="wk"><div class="h">'+d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})
+      +'<span class="sp"></span><span>'+w.sets.length+' sets · '
+      +w.sets.reduce((a,s)=>a+s.reps,0)+' reps · '+mins+' min</span></div>'
       +Object.keys(byEx).map(n=>'<div class="ex" style="padding:7px 0"><div class="nm" style="font-size:13px">'
         +esc(n)+'</div><div class="vol">'+byEx[n].join(' · ')+'</div></div>').join('')
       +'</div>';
-  }).join(''):'<div class="hint">Завершених тренувань ще немає. Утримай кнопку на кришці, щоб завершити.</div>';
+  }).join(''):'<div class="hint">No finished workouts yet. Hold the cap button to finish one.</div>';
 }
 function ui(){
-  $('chHz').textContent=S.hz?S.hz.toFixed(0)+' Гц':'— Гц';
+  $('chHz').textContent=S.hz?S.hz.toFixed(0)+' Hz':'— Hz';
   if(S.mode===0){
-    $('l_reps').textContent=S.live?S.setReps.length:(S.pendN||0);
-    $('l_ex').textContent=S.pendEx||'вправа не вибрана';
-    $('l_phase').textContent=S.live?'йде підхід':'натисни «почати підхід»';
+    $('l_reps').textContent=S.live?S.setReps.length:0;
+    $('l_ex').textContent=S.pendEx||'no exercise yet';
+    $('l_phase').textContent=S.live?'set running':'press “start set”';
     const last=S.setReps[S.setReps.length-1];
-    $('l_tempo').textContent=last&&last.ecc?last.ecc.toFixed(1)+'с':'—';
+    $('l_tempo').textContent=last&&last.ecc?last.ecc.toFixed(1)+'s':'—';
     $('l_tempo').style.color=last&&last.ecc&&last.ecc<CFG.ecc?'#ff6b6b':'#e8edf5';
     $('l_per').textContent=last?last.per.toFixed(1):'—';
     const d=S.live?Math.floor(now()-S.setT0):0;
@@ -823,22 +892,23 @@ function ui(){
     $('l_bar').style.width=clamp(sg/Math.max(th*2,.02),0,1)*100+'%';
     $('l_bar').style.background=sg>th?'#2fd07a':'#2f7cf6';
     const fastN=S.setReps.filter(r=>r.ecc>0&&r.ecc<CFG.ecc).length;
-    $('l_note').innerHTML=(S.live&&fastN)?'<div class="warnbox">'+fastN+' повтор(ів) опущено швидше за '+CFG.ecc+' с</div>':'';
+    $('l_note').innerHTML=(S.live&&fastN)?'<div class="warnbox">'+fastN+' rep(s) lowered faster than '+CFG.ecc+'s</div>':'';
   } else if(S.mode===2){
-    $('d_hz').textContent=S.hz.toFixed(0)+' Гц';
+    $('d_hz').textContent=S.hz.toFixed(0)+' Hz';
     $('d_sig').textContent=(S.det?S.det.sig:0).toFixed(3);
     $('d_thr').textContent=(S.det?S.det.thr:0).toFixed(3);
     $('d_gyr').textContent=S.gyRate.toFixed(0);
     draw($('cvR'),[{d:buf.thr,c:'#3a4553',w:1,mirror:1},{d:buf.sig,c:'#4dabf7',w:2}]);
     const p=currentParams();
-    $('d_dbg').textContent='кадрів '+S.pkFrames+' · нотифікацій '+S.pkTotal+'\n'
-      +'LSB/g '+S.gn.toFixed(0)+' (паспорт 2048)\n'
-      +'рух '+S.motion.toFixed(3)+' g · спокій '+S.stillT.toFixed(1)+' с\n'
-      +'кнопка '+(S.btn?'НАТИСНУТА':'відпущена')+' · підхід '+(S.live?'ЙДЕ':'ні')+'\n'
-      +'вправа '+(S.pendEx||'—')+'\n'
-      +'параметри sens '+p.sens+' perMin '+p.perMin+' floor '+p.floor;
+    $('d_dbg').textContent='frames '+S.pkFrames+' · notifications '+S.pkTotal+'\n'
+      +'LSB/g '+S.gn.toFixed(0)+' (datasheet 2048)\n'
+      +'motion '+S.motion.toFixed(3)+' g · still '+S.stillT.toFixed(1)+' s\n'
+      +'button '+(S.btn?'DOWN':'up')+' · set '+(S.live?'RUNNING':'idle')+'\n'
+      +'exercise '+(S.pendEx||'—')+'\n'
+      +'params  sens '+p.sens+'  perMin '+p.perMin+'  floor '+p.floor+'\n'
+      +'logged sets '+DB.res.length+' · app v'+APP_VERSION;
   }
-  const sec=S.wk?Math.max(0,Math.floor((Date.now()-S.wk.start)/1000)):0;
+  const sec=DB.cur?Math.max(0,Math.floor((Date.now()-DB.cur.start)/1000)):0;
   $('w_clock').textContent=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
   if(S.restOn){const l=Math.max(0,Math.ceil(S.restLeft));
     $('r_t').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');}
@@ -856,12 +926,13 @@ async function wakeLock(){ if(!CFG.wake||!navigator.wakeLock)return;
   try{wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null;});}catch(e){} }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wakeLock();});
 
-/* ══ ДЕМО ══ */
+/* ══ DEMO (no hardware needed) ══ */
 let demoT=null;
 function demo(on){
-  if(demoT){clearInterval(demoT);demoT=null;setStat(S.connected?'Triki':'не підключено',S.connected?'on':'');return;}
+  if(demoT){clearInterval(demoT);demoT=null;setStat(S.connected?'Triki':'not connected',S.connected?'on':'');
+    $('bDemo').textContent='Demo mode';return;}
   if(!on)return;
-  const t0=now(); S.running=true; setStat('ДЕМО','warn');
+  const t0=now(); S.running=true; setStat('DEMO','warn'); $('bDemo').textContent='Stop demo';
   demoT=setInterval(()=>{
     const s=now()-t0,f=0.45;
     const aV=(0.5/2)*Math.pow(2*Math.PI*f,2)*Math.cos(2*Math.PI*f*s)/G_MS2*2048;
@@ -873,24 +944,34 @@ function demo(on){
   },1000/60);
 }
 
-/* ══ CSV ══ */
+/* ══ EXPORT ══ */
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform||''));
-async function exportCsv(){
-  if(!S.log.length){toast('Немає даних');return;}
-  let s='epoch_ms,iso_time,a_vert_g,signal,threshold,rep_idx\n';
-  for(const r of S.log) s+=r[0]+','+new Date(r[0]).toISOString()+','+r[1]+','+r[2]+','+r[3]+','+r[4]+'\n';
-  const name='ironcap_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
-  let f=null; try{f=new File([s],name,{type:'text/csv'});}catch(e){}
+async function share(text,name,mime){
+  let f=null; try{f=new File([text],name,{type:mime});}catch(e){}
   if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
     try{await navigator.share({files:[f],title:name});return;}catch(e){if(e&&e.name==='AbortError')return;}
   }
-  if(!IS_IOS){try{const u=URL.createObjectURL(new Blob([s],{type:'text/csv'}));
+  if(!IS_IOS){try{const u=URL.createObjectURL(new Blob([text],{type:mime}));
     const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),4000);return;}catch(e){}}
-  $('expT').value=s;$('exp').classList.add('on');
+  $('expT').value=text;$('exp').classList.add('on');
+}
+function stamp(){ return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); }
+async function exportResearch(){
+  if(!DB.res.length){toast('No sets logged yet');return;}
+  const doc={app:'IronCap',version:APP_VERSION,exported:new Date().toISOString(),
+    note:'raw = [[dt_ms, vertical_acceleration_g], ...] at ~30 Hz; truth = confirmed rep count',
+    exercises:DB.ex, sets:DB.res};
+  await share(JSON.stringify(doc), 'ironcap_dataset_'+stamp()+'.json', 'application/json');
+}
+async function exportCsv(){
+  if(!S.log.length){toast('No stream captured');return;}
+  let s='epoch_ms,iso_time,a_vert_g,signal,threshold,rep_idx\n';
+  for(const r of S.log) s+=r[0]+','+new Date(r[0]).toISOString()+','+r[1]+','+r[2]+','+r[3]+','+r[4]+'\n';
+  await share(s,'ironcap_raw_'+stamp()+'.csv','text/csv');
 }
 
-/* ══ UI ══ */
+/* ══ UI WIRING ══ */
 $('tabs').onclick=e=>{const t=e.target.closest('.tab');if(t){audioResume();setMode(+t.dataset.m);}};
 $('bConn').onclick=()=>S.connected?disconnect():connect();
 $('goLive').onclick=()=>{audioResume();S.live?endSet(false):startSet();};
@@ -901,14 +982,15 @@ $('cfg').onclick=e=>{if(e.target===$('cfg'))$('cfg').classList.remove('on');};
 $('expX').onclick=()=>$('exp').classList.remove('on');
 $('r_skip').onclick=()=>stopRest(false);
 $('bCsv').onclick=exportCsv;
+$('bResearch').onclick=exportResearch;
 $('bDemo').onclick=()=>demo(!demoT);
 $('bEndWk').onclick=()=>{$('cfg').classList.remove('on');endWorkout();};
 $('expCopy').onclick=async()=>{const t=$('expT');t.select();
-  try{await navigator.clipboard.writeText(t.value);toast('Скопійовано');}
-  catch(e){document.execCommand('copy');toast('Скопійовано');}};
-$('bWipe').onclick=()=>{ if(!confirm('Стерти всі вправи, історію і навчання?'))return;
-  DB={ex:{},wk:[]};S.wk=null;S.pendEx=null;saveDB();renderWk();renderHist();
-  $('cfg').classList.remove('on');toast('Дані стерто'); };
+  try{await navigator.clipboard.writeText(t.value);toast('Copied');}
+  catch(e){document.execCommand('copy');toast('Copied');}};
+$('bWipe').onclick=()=>{ if(!confirm('Erase all exercises, history and learning?'))return;
+  DB={ex:{},wk:[],cur:null,res:[]};S.pendEx=null;saveDB();renderWk();renderHist();
+  $('cfg').classList.remove('on');toast('All data erased'); };
 
 $('pm_minus').onclick=()=>{S.pendN=Math.max(0,S.pendN-1);$('pm_n').textContent=S.pendN;beep(700,.05);};
 $('pm_plus').onclick=()=>{S.pendN++;$('pm_n').textContent=S.pendN;beep(950,.05);};
@@ -917,11 +999,10 @@ $('p_exlist').onclick=e=>{const o=e.target.closest('.exopt');if(!o)return;
   [...$('p_exlist').children].forEach(c=>c.classList.toggle('sel',c===o));};
 $('p_save').onclick=()=>{
   const nm=($('p_new').value||'').trim()||S.pendEx;
-  if(!nm){ toast('Обери або впиши вправу'); return; }
-  const corrected = S.pendN!==(S.pend?S.pend.reps.length:S.pendN);
-  commitSet(nm,S.pendN,corrected);
+  if(!nm){ toast('Pick or type an exercise name'); return; }
+  commitSet(nm,S.pendN,S.pendN!==S.pendAuto);
 };
-$('p_drop').onclick=()=>{S.pend=null;$('post').classList.remove('on');toast('Підхід викинуто');};
+$('p_drop').onclick=()=>{S.pend=null;$('post').classList.remove('on');toast('Set discarded');};
 $('postX').onclick=()=>{S.pend=null;$('post').classList.remove('on');};
 
 function sw(id,key,after){const e=$(id);e.classList.toggle('on',!!CFG[key]);
@@ -937,9 +1018,14 @@ $('oVol').value=CFG.vol;
 $('oVol').oninput=()=>{CFG.vol=+$('oVol').value;if(MASTER)MASTER.gain.setTargetAtTime(CFG.vol/100,AC.currentTime,.05);};
 $('oVol').onchange=()=>{saveCfg();audioResume();beep(880,.1);};
 
+// never lose a session to a reload or a backgrounded tab
+window.addEventListener('pagehide',()=>{try{saveDB();}catch(e){}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveDB();});
+
 document.addEventListener('touchstart',audioResume,{passive:true});
 document.addEventListener('click',audioResume);
 S.det=makeDetector(DEF);
+if(DB.cur&&DB.cur.sets&&DB.cur.sets.length) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
 setMode(0); renderWk(); renderHist(); ui();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>

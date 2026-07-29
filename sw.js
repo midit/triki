@@ -1,7 +1,7 @@
-/* IronCap service worker — офлайн-кеш оболонки.
-   Мережа-перш-за-все, кеш як запасний варіант: так апка завжди свіжа,
-   але в підвалі спортзалу без мережі все одно відкриється. */
-const CACHE = 'ironcap-v1';
+/* IronCap service worker — offline shell.
+   Network-first with a cache fallback: the app stays fresh, but still opens
+   in a basement gym with no signal. */
+const CACHE = 'ironcap-v2';
 const SHELL = ['./ironcap.html', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
