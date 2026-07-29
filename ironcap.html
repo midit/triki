@@ -64,6 +64,7 @@ canvas.chart{width:100%;height:110px;display:block;background:#0b1017;border-rad
 .setrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .pill{background:#0c1119;border:1px solid #1a2230;border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:700}
 .pill.man{border-color:#2c4a6e;color:#8ec5ff}
+.pill.pr{border-color:#5a4a1a;background:#1a1508;color:#ffd98a}
 
 .dock{position:fixed;left:0;right:0;bottom:0;background:rgba(10,13,18,.94);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #1a2230;
@@ -309,6 +310,9 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
     <b>iOS:</b> needs the <b>Bluefy</b> browser. If Triki doesn't show up, press its
     button to wake it first.
   </div>
+  <div class="row" style="border:0;justify-content:center">
+    <span class="hint" id="buildInfo">build dev</span>
+  </div>
 </div></div>
 
 <div class="sheet" id="exp"><div class="sheetin">
@@ -370,7 +374,7 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
    you can read exactly which numbers changed and why.
    ══════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION='4.0';
+const APP_VERSION='5.0';
 
 const NUS='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const C_W='6e400002-b5a3-f393-e0a9-e50e24dcca9e';   // write / RX
@@ -758,6 +762,7 @@ function commitSet(exName,n,corrected){
   const p=S.pend; if(!p) return;
   if(!DB.ex[exName]) DB.ex[exName]={params:Object.assign({},DEF),used:0,labels:0,samples:[],per:0};
   const ex=DB.ex[exName];
+  const firstEver=(ex.used||0)===0;             // first set is a baseline, not a "record"
   ex.used=(ex.used||0)+1;
   const iv=[]; for(let i=1;i<p.reps.length;i++) iv.push(p.reps[i].t-p.reps[i-1].t);
   if(iv.length){ const m=iv.reduce((a,b)=>a+b,0)/iv.length; ex.per=ex.per?ex.per*0.7+m*0.3:m; }
@@ -766,8 +771,20 @@ function commitSet(exName,n,corrected){
   const w=parseFloat($('wg_v').value);
   const weight=(!isNaN(w)&&w>0)?w:0;
   if(weight) ex.lastW=weight;                   // remember for next set's prefill
-  DB.cur.sets.push({ex:exName,reps:n,w:weight,dur:Math.round(p.dur),ts:p.ts,man:corrected,
+
+  // Personal records (Hevy-style medals). e1RM = Epley estimate.
+  const e1=weight>0?+(weight*(1+n/30)).toFixed(1):0, vol=weight*n;
+  ex.pr=ex.pr||{e1rm:0,vol:0,reps:0};
+  const badges=[];
+  if(weight>0 && e1>ex.pr.e1rm+0.05){ ex.pr.e1rm=e1; if(!firstEver)badges.push('1RM'); }
+  if(weight>0 && vol>ex.pr.vol){ ex.pr.vol=vol; if(!firstEver)badges.push('Volume'); }
+  if(n>ex.pr.reps){ ex.pr.reps=n; if(!firstEver&&weight>0)badges.push('Reps'); }
+  if(firstEver){ ex.pr.e1rm=e1; ex.pr.vol=vol; ex.pr.reps=n; }
+
+  DB.cur.sets.push({ex:exName,reps:n,w:weight,e1:e1,pr:badges,dur:Math.round(p.dur),ts:p.ts,man:corrected,
     ecc:eccs.length?+(eccs.reduce((a,b)=>a+b,0)/eccs.length).toFixed(1):0});
+  if(badges.length){ setTimeout(()=>{ beep(1318,.1);setTimeout(()=>beep(1760,.16),110);
+    say('New record',true); },260); }
 
   // Research log — every set, labelled, with its FULL-RESOLUTION trace.
   // Earlier this halved the sample rate to save space; on real data that
@@ -789,10 +806,12 @@ function commitSet(exName,n,corrected){
     while(ex.samples.length>6) ex.samples.shift();
     msg=retune(exName);
   }
+  const prTxt=badges.length?' 🏆 '+badges.join(' + ')+' PR!':'';
+  apiEmit('set',{exercise:exName,reps:n,weight:weight,e1RM:e1,records:badges,ts:p.ts});
   S.pendEx=exName; S.pend=null;
   saveDB(); renderWk(); renderHist();
   $('post').classList.remove('on');
-  toast(exName+': '+n+' reps');
+  toast(exName+': '+n+' reps'+(weight?' · '+weight+'kg':'')+prTxt);
   if(msg) setTimeout(()=>toast(msg),2400);
   startRest();
 }
@@ -896,7 +915,8 @@ function endWorkout(){
   if(S.live) endSet(false);
   if(!DB.cur||!DB.cur.sets.length){ toast('Nothing to save yet'); return; }
   DB.cur.end=Date.now(); DB.wk.unshift(DB.cur); while(DB.wk.length>60) DB.wk.pop();
-  const n=DB.cur.sets.length; DB.cur=null; saveDB(); renderWk(); renderHist();
+  const done=DB.wk[0], n=DB.cur.sets.length; DB.cur=null; saveDB(); renderWk(); renderHist();
+  apiEmit('workout',JSON.parse(JSON.stringify(done)));
   toast('Workout saved: '+n+' sets'); say('Workout saved',true);
 }
 
@@ -940,7 +960,8 @@ function renderWk(){
   $('w_list').innerHTML=names.length?names.map(n=>{
     const ss=byEx[n];
     const vol=ss.reduce((a,s)=>a+(s.w||0)*s.reps,0);
-    const pill=s=>'<span class="pill'+(s.man?' man':'')+'">'+(s.w?s.w+'×'+s.reps:s.reps)+'</span>';
+    const pill=s=>'<span class="pill'+(s.man?' man':'')+(s.pr&&s.pr.length?' pr':'')+'">'
+      +(s.pr&&s.pr.length?'🏆 ':'')+(s.w?s.w+'×'+s.reps:s.reps)+'</span>';
     return '<div class="ex"><div class="nm">'+esc(n)
       +'<small>'+ss.length+' set'+(ss.length===1?'':'s')+'</small>'
       +'<div class="setrow">'+ss.map(pill).join('')+'</div>'
@@ -953,10 +974,11 @@ function renderHist(){
   const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
   $('h_ex').innerHTML=names.length?names.map(n=>{
     const e=DB.ex[n], trained=(e.labels||0)>0;
+    const pr=e.pr&&e.pr.e1rm?('best '+e.pr.e1rm+'kg 1RM'):(e.pr&&e.pr.reps?('best '+e.pr.reps+' reps'):'');
     return '<div class="ex"><div class="nm">'+esc(n)
-      +'<small>'+(e.used||0)+' sets · '
+      +'<small>'+(e.used||0)+' sets'+(pr?' · '+pr:'')+' · '
       +(trained?('trained on '+e.labels+' correction'+(e.labels===1?'':'s')):'not corrected yet')
-      +(e.per?(' · '+e.per.toFixed(1)+'s/rep'):'')+'</small></div>'
+      +'</small></div>'
       +'<div class="vol">'+(trained?'🎓':'—')+'</div></div>';
   }).join(''):'<div class="hint">No exercises yet.</div>';
   $('h_wk').innerHTML=DB.wk.length?DB.wk.map(w=>{
@@ -1073,12 +1095,18 @@ async function share(text,name,mime){
   $('expT').value=text;$('exp').classList.add('on');
 }
 function stamp(){ return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'); }
+/* Full export — the data contract the SDK (sdk/ironcap.mjs) reads. */
+function snapshot(){
+  return {app:'IronCap',version:APP_VERSION,build:BUILD.shortCommit||'dev',
+    exported:new Date().toISOString(),
+    note:'workouts[].sets have {ex,reps,w,e1,pr}; research[].raw = [[dt_ms, vertical_acceleration_g], ...]; truth = confirmed rep count',
+    exercises:DB.ex,
+    workouts:[...(DB.cur?[DB.cur]:[]),...DB.wk],
+    research:DB.res};
+}
 async function exportResearch(){
-  if(!DB.res.length){toast('No sets logged yet');return;}
-  const doc={app:'IronCap',version:APP_VERSION,exported:new Date().toISOString(),
-    note:'raw = [[dt_ms, vertical_acceleration_g], ...] at ~30 Hz; truth = confirmed rep count',
-    exercises:DB.ex, sets:DB.res};
-  await share(JSON.stringify(doc), 'ironcap_dataset_'+stamp()+'.json', 'application/json');
+  if(!DB.res.length&&!DB.wk.length&&!DB.cur){toast('Nothing to export yet');return;}
+  await share(JSON.stringify(snapshot()), 'ironcap_dataset_'+stamp()+'.json', 'application/json');
 }
 async function exportCsv(){
   if(!S.log.length){toast('No stream captured');return;}
@@ -1156,6 +1184,52 @@ S.det=makeDetector(DEF);
 if(DB.cur&&DB.cur.sets&&DB.cur.sets.length) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
 setMode(0); renderWk(); renderHist(); ui();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ══ BUILD INFO (written by CI, fetched at runtime) ══ */
+let BUILD={shortCommit:'dev'};
+fetch('build-info.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(b=>{
+  if(b){ BUILD=b; const el=$('buildInfo');
+    if(el) el.textContent='build '+(b.shortCommit||'—')+' · '+(b.builtAt||'').slice(0,10); }
+}).catch(()=>{});
+
+/* ══ PUBLIC API ════════════════════════════════════════════════════════
+   Read-only integration surface for embedding IronCap in another app.
+
+   Direct (same page / console):
+     IronCap.snapshot()      full export object (feed to sdk/ironcap.mjs)
+     IronCap.workouts()      finished + in-progress workouts
+     IronCap.exercises()     exercise library with PRs and tuned params
+     IronCap.on(evt, cb)     'set' | 'workout' events
+
+   Embedded in an iframe — the host posts a request, IronCap replies, and
+   IronCap also emits live events to the parent:
+     iframe.contentWindow.postMessage({source:'host', type:'snapshot', id:1}, '*')
+     window.addEventListener('message', e => { e.data … })  // {source:'ironcap', ...}
+   ──────────────────────────────────────────────────────────────────────*/
+const API_LISTENERS={set:[],workout:[]};
+window.IronCap={
+  version:APP_VERSION,
+  snapshot,                                   // full data contract
+  workouts:()=>[...(DB.cur?[DB.cur]:[]),...DB.wk].map(w=>JSON.parse(JSON.stringify(w))),
+  exercises:()=>JSON.parse(JSON.stringify(DB.ex)),
+  research:()=>JSON.parse(JSON.stringify(DB.res)),
+  on:(evt,cb)=>{ (API_LISTENERS[evt]||[]).push(cb); return ()=>{
+    const a=API_LISTENERS[evt]; const i=a?a.indexOf(cb):-1; if(i>=0)a.splice(i,1); }; }
+};
+function apiEmit(evt,payload){
+  (API_LISTENERS[evt]||[]).forEach(cb=>{ try{cb(payload);}catch(e){} });
+  try{ if(window.parent&&window.parent!==window)
+    window.parent.postMessage({source:'ironcap',type:evt,payload},'*'); }catch(e){}
+}
+window.addEventListener('message',e=>{
+  const m=e.data; if(!m||m.source!=='host'||!m.type) return;
+  const reply=data=>{ try{e.source&&e.source.postMessage(
+    {source:'ironcap',type:m.type,id:m.id,data},'*');}catch(_){} };
+  if(m.type==='snapshot') reply(snapshot());
+  else if(m.type==='workouts') reply(window.IronCap.workouts());
+  else if(m.type==='exercises') reply(window.IronCap.exercises());
+  else if(m.type==='version') reply({version:APP_VERSION,build:BUILD.shortCommit});
+});
 </script>
 </body>
 </html>

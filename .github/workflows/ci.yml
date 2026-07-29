@@ -1,0 +1,75 @@
+name: CI/CD
+
+# Test the rep-counting algorithm and analytics SDK, then publish the app
+# (and a build-info manifest) to GitHub Pages. No external services.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test SDK & rep counter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check the SDK
+        run: node --check sdk/ironcap.mjs
+      - name: Run unit tests
+        run: node --test --test-reporter=spec test/
+      - name: Guard — app detector matches the SDK defaults
+        run: |
+          grep -q "const DEF={sens:0.90, perMin:0.70, floor:0.048};" ironcap.html \
+            || (echo "::error::ironcap.html detector defaults drifted from the SDK" && exit 1)
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage public site
+        run: |
+          mkdir -p _site/sdk
+          cp ironcap.html index.html manifest.webmanifest sw.js README.md _site/
+          cp sdk/ironcap.mjs _site/sdk/
+          touch _site/.nojekyll
+      - name: Write build-info manifest
+        run: |
+          cat > _site/build-info.json <<JSON
+          {
+            "app": "IronCap",
+            "commit": "${GITHUB_SHA}",
+            "shortCommit": "${GITHUB_SHA:0:7}",
+            "ref": "${GITHUB_REF_NAME}",
+            "runNumber": ${GITHUB_RUN_NUMBER},
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "workflow": "${GITHUB_WORKFLOW}"
+          }
+          JSON
+          echo "Built:"; cat _site/build-info.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

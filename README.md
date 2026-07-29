@@ -1,5 +1,9 @@
 # IronCap — a gym rep counter built from a bottle-cap BLE toy
 
+[![CI/CD](https://github.com/midit/triki/actions/workflows/ci.yml/badge.svg)](https://github.com/midit/triki/actions/workflows/ci.yml)
+[![Live](https://img.shields.io/badge/live-midit.github.io%2Ftriki-2fd07a)](https://midit.github.io/triki/ironcap.html)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Żabka, a Polish convenience-store chain, gave away a small BLE gadget called
 **Triki** — a plastic bottle cap with a motion sensor inside, meant for playing
 tilt games in their loyalty app. It contains a genuinely decent IMU.
@@ -164,6 +168,93 @@ irrelevant here, and out of scope.)
 
 ---
 
+## Analytics SDK
+
+[`sdk/ironcap.mjs`](sdk/ironcap.mjs) is a dependency-free ES module (browser and
+Node) that parses an export and computes analytics. It also ships the **reference
+rep-counting detector**, so the exact algorithm the phone runs can be replayed
+and unit-tested off-device.
+
+```js
+import * as IronCap from './sdk/ironcap.mjs';
+
+const data   = IronCap.parse(exportedJson);   // tolerant of every export version
+const report = IronCap.analyze(data);
+
+report.totals;      // { workouts, sets, reps, volumeKg, durationMin }
+report.byExercise;  // per-exercise volume, bestE1RM, PRs, session progression
+report.counter;     // how well the auto-counter did vs your confirmed counts
+
+IronCap.epley1RM(100, 10);            // → 133.3  (estimated 1RM)
+IronCap.countTrace(rawTrace).count;  // replay the detector on a raw signal
+IronCap.recount(researchSet, { sens: 1.1 });   // re-count with different params
+```
+
+## Integration API
+
+The app exposes a **read-only** surface for other tools.
+
+**Same page / console:**
+
+```js
+IronCap.snapshot()    // the full export object — feed straight into the SDK
+IronCap.workouts()    // finished + in-progress workouts
+IronCap.exercises()   // exercise library with PRs and tuned detector params
+IronCap.on('set',     s => …)   // fires on every logged set (incl. PRs)
+IronCap.on('workout', w => …)   // fires when a workout is finished
+```
+
+**Embedded in an iframe** — request/response and live events over `postMessage`:
+
+```js
+const app = document.querySelector('iframe').contentWindow;
+app.postMessage({ source: 'host', type: 'snapshot', id: 1 }, '*');
+
+window.addEventListener('message', e => {
+  if (e.data?.source !== 'ironcap') return;
+  // replies: { source:'ironcap', type, id, data }
+  // live events: { source:'ironcap', type:'set'|'workout', payload }
+});
+```
+
+Request types: `snapshot`, `workouts`, `exercises`, `version`.
+
+### Export schema
+
+`IronCap.snapshot()` and the **Data → Export dataset** button produce:
+
+```jsonc
+{
+  "app": "IronCap", "version": "5.0", "build": "abc1234",
+  "exercises": { "Squat": { "params": {…}, "pr": {…}, "used": 4, "labels": 2 } },
+  "workouts":  [ { "start": …, "end": …,
+                   "sets": [ { "ex": "Squat", "reps": 10, "w": 100, "e1": 133.3,
+                               "pr": ["1RM"], "ecc": 1.4, "ts": … } ] } ],
+  "research":  [ { "ts": …, "ex": "Squat", "auto": 9, "truth": 10,
+                   "corrected": true, "raw": [[dt_ms, vertical_accel_g], …] } ]
+}
+```
+
+## DevOps — CI/CD
+
+Everything ships through a [GitHub Actions pipeline](.github/workflows/ci.yml);
+no external infrastructure.
+
+- **Test** — Node's built-in runner unit-tests the rep-counting detector and the
+  analytics SDK ([`test/`](test/)). Deterministic synthetic signals with known
+  rep counts assert the counter's accuracy, and a guard step fails the build if
+  the app's detector constants ever drift from the SDK's.
+- **Deploy** — on `main`, the site is staged and published to GitHub Pages with
+  the official `deploy-pages` action (Pages source = *GitHub Actions*, not a
+  branch).
+- **Build manifest** — the pipeline writes [`build-info.json`](https://midit.github.io/triki/build-info.json)
+  (commit, build time, run number). The app fetches it at runtime and shows the
+  build in Settings — a tiny always-current health/version endpoint.
+
+```bash
+node --test test/     # run the suite locally
+```
+
 ## Running locally
 
 ```bash
@@ -176,11 +267,14 @@ context: `localhost` and `https` qualify, plain `http` over the LAN does not.
 ## Repository layout
 
 ```
-ironcap.html          the gym app (self-contained, no dependencies)
-index.html            cycling cadence app
-manifest.webmanifest  PWA manifest
-sw.js                 service worker, offline shell
-triki_logger.py       desktop BLE logger (bleak) for capturing raw data
+ironcap.html               the gym app (self-contained, no dependencies)
+index.html                 cycling cadence app
+manifest.webmanifest       PWA manifest
+sw.js                      service worker, offline shell
+sdk/ironcap.mjs            analytics SDK + reference detector (browser & Node)
+test/                      unit tests (node --test)
+.github/workflows/ci.yml   test + deploy pipeline
+triki_logger.py            desktop BLE logger (bleak) for capturing raw data
 ```
 
 ## Status and honest limitations

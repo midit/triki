@@ -1,7 +1,7 @@
 /* IronCap service worker — offline shell.
    Network-first with a cache fallback: the app stays fresh, but still opens
    in a basement gym with no signal. */
-const CACHE = 'ironcap-v2';
+const CACHE = 'ironcap-v3';
 const SHELL = ['./ironcap.html', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
