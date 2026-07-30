@@ -295,6 +295,7 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Rest timer, s</label><input type="number" id="oRest" value="90" min="10" max="600" step="5"></div>
   <div class="row"><label>Always confirm rep count<small>keep ON while collecting training data — every confirmation teaches the counter</small></label><div class="sw on" id="oAsk"></div></div>
   <div class="row"><label>Min eccentric time, s</label><input type="number" id="oEcc" value="1.0" min="0.3" max="5" step="0.1"></div>
+  <div class="row"><label>Auto-start sets<small>starts counting when a steady rhythm appears, and back-fills the reps you already did</small></label><div class="sw on" id="oAuto"></div></div>
   <div class="row"><label>Auto-stop set after, s<small>stillness longer than this ends the set</small></label>
     <input type="number" id="oIdle" value="20" min="4" max="90" step="1"></div>
   <div class="row"><label>Battery saver<small>halves the sensor rate to 52 Hz — longer battery, but may miss fast reps. Reconnect to apply</small></label><div class="sw" id="oLow"></div></div>
@@ -400,7 +401,8 @@ const now=()=>performance.now()/1000;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false};
+const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false,autoStart:true};
+const PREROLL_S=25;        // seconds of signal kept before a set begins
 try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg4')||'{}'));}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));}catch(e){}};
 
@@ -499,6 +501,7 @@ const S={
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
   aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
   det:null, live:false, arming:false, setT0:0, setRec:[], setReps:[], lastMove:0,
+  pre:[], preT:0, preReps:[], autoStarted:false,
   log:[], running:false,
   btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false, btnJolt:0,
   restOn:false, restLeft:0, restFull:90, restFrozen:false, bumpT:-9, goState:'',
@@ -668,7 +671,18 @@ function physics(a,g,dt,t,gap,raw){
       if(S.motionEma>0.012 || !still) S.lastMove=t;
       if(t-S.lastMove>CFG.idle) endSet(true);
     }
-  } else if(S.det){ S.det.push(S.aV,dt,t,gap); }   // keep filters warm
+  } else {
+    // NOT in a set: keep a rolling pre-roll of the signal and watch for a
+    // rhythm starting. This is what lets the app catch reps you did BEFORE
+    // pressing start — press whenever, the count is back-filled.
+    S.pre.push([Math.round(raw*1000),+S.aV.toFixed(4),Math.round(S.gyRate)]);
+    S.preT+=raw;
+    while(S.preT>PREROLL_S && S.pre.length){ S.preT-=S.pre[0][0]/1000; S.pre.shift(); }
+    const r=S.det?S.det.push(S.aV,dt,t,gap):null;   // background detector
+    if(r){ S.preReps.push(t); while(S.preReps.length>8) S.preReps.shift(); }
+    while(S.preReps.length && t-S.preReps[0]>PREROLL_S) S.preReps.shift();
+    if(CFG.autoStart && !S.restOn && S.connected) maybeAutoStart(t);
+  }
 
   restLogic(dt,t);
   charts();
@@ -687,9 +701,57 @@ function startSet(){
   // settled (still ~0.7 s = racked/positioned, hand off), or 5 s as a
   // fallback. When it settles we reset the detector and the trace so the
   // real reps start from a clean zero.
+  // If reps were already happening, don't discard them: adopt the pre-roll
+  // and skip arming entirely — the lifter is clearly already under load.
+  if(CFG.autoStart && S.preReps.length>=2){ adoptPreroll(false); return; }
   S.live=true; S.arming=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
   S.det=makeDetector(currentParams());
+  clearPre();
   sfxStart(); say('Get set',true);
+  $('bSet').innerHTML='Finish set<span class="s">1 click on cap</span>';
+  $('l_reps').classList.remove('idle');
+}
+function clearPre(){ S.pre=[]; S.preT=0; S.preReps=[]; }
+
+/* ══ AUTO-START + CATCH-UP ═════════════════════════════════════════════
+   A background detector runs whenever a set is not in progress, and the
+   raw signal is kept in a PREROLL_S ring buffer. Once a steady rhythm
+   appears we open the set automatically and re-count the buffered signal,
+   so reps done before you touched anything are already on the board.
+   Guarded: needs several reps AND a regular cadence, so walking to the
+   rack or carrying a dumbbell does not trigger it.                     */
+function maybeAutoStart(t){
+  const r=S.preReps;
+  if(r.length<4) return;                         // 4 reps before we believe it
+  const gaps=[]; for(let i=1;i<r.length;i++) gaps.push(r[i]-r[i-1]);
+  const sorted=[...gaps].sort((a,b)=>a-b), med=sorted[sorted.length>>1];
+  // a lifted rep is slower than a walking stride; below 1 s it is not a rep
+  if(!(med>1.0&&med<6)) return;
+  const mad=[...gaps].map(g=>Math.abs(g-med)).sort((a,b)=>a-b)[gaps.length>>1];
+  if(mad/med>0.22) return;                       // cadence not steady enough
+  if(t-r[r.length-1]>med*1.8) return;            // rhythm already stopped
+  adoptPreroll(true);
+}
+function adoptPreroll(auto){
+  // Adopt the whole ring buffer: it is only PREROLL_S long, and the
+  // re-count applies the same gating the live counter would have.
+  S.live=true; S.arming=false;
+  S.setRec=S.pre.slice();
+  const span=S.setRec.reduce((a,f)=>a+f[0]/1000,0);
+  S.setT0=now()-span;                                  // set began that long ago
+  const P=currentParams();
+  const back=countOffline(S.setRec,P);                 // re-count the buffer
+  S.setReps=back.map(x=>({t:S.setT0+x.t,per:x.per,ecc:x.ecc}));
+  // replay the buffer through the live detector so its filters are in sync
+  S.det=makeDetector(P);
+  let tt=S.setT0;
+  for(const f of S.setRec){ const dt=clamp(f[0]/1000,DT_MIN,DT_MAX); tt+=dt;
+    S.det.push(f[1],dt,tt,false); }
+  S.lastMove=now(); S.autoStarted=auto; clearPre();
+  sfxReady();
+  const n=S.setReps.length;
+  toast((auto?'Set auto-started':'Caught up')+' — '+n+' rep'+(n===1?'':'s')+' already counted');
+  say(auto?'Counting':'Caught up',true);
   $('bSet').innerHTML='Finish set<span class="s">1 click on cap</span>';
   $('l_reps').classList.remove('idle');
 }
@@ -712,6 +774,7 @@ function onRep(r,t){
 function cancelSet(){
   if(!S.live) return;
   S.live=false; sfxStop(); toast('Set cancelled'); resetLiveUI();
+  S.det=makeDetector(currentParams()); clearPre();
 }
 function resetLiveUI(){
   $('bSet').innerHTML='Start set<span class="s">1 click on cap</span>';
@@ -720,6 +783,7 @@ function resetLiveUI(){
 function endSet(auto){
   if(!S.live) return;
   S.live=false; resetLiveUI();
+  S.det=makeDetector(currentParams()); clearPre();  // fresh background watcher
   const dur=now()-S.setT0, n=S.setReps.length;
   if(n<1){ toast(auto?'Empty set — discarded':'No reps detected'); beep(300,.12); return; }
   sfxStop();
@@ -1315,7 +1379,7 @@ function sw(id,key,after){const e=$(id);e.classList.toggle('on',!!CFG[key]);
   e.onclick=()=>{CFG[key]=!CFG[key];e.classList.toggle('on',CFG[key]);saveCfg();after&&after();};}
 function num(id,key){const e=$(id);e.value=CFG[key];
   e.onchange=()=>{const v=parseFloat(e.value);if(!isNaN(v)){CFG[key]=v;saveCfg();}};}
-sw('oWake','wake',wakeLock); sw('oAsk','ask');
+sw('oWake','wake',wakeLock); sw('oAsk','ask'); sw('oAuto','autoStart',clearPre);
 sw('oLow','lowRate',()=>{ if(S.connected&&S.chW){
   const wr=v=>S.chW.writeValueWithoutResponse?S.chW.writeValueWithoutResponse(v):S.chW.writeValue(v);
   try{ wr(initStream(CFG.lowRate?0x34:0x68)); toast(CFG.lowRate?'52 Hz — battery saver on':'104 Hz — full accuracy'); }
