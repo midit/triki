@@ -644,7 +644,12 @@ function physics(a,g,dt,t,gap,raw){
   S.aV=(lin[0]*S.grav[0]+lin[1]*S.grav[1]+lin[2]*S.grav[2])/gl/S.gn;
 
   if(S.live){
-    S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4)]);
+    // 3rd column = bias-compensated rotation rate (deg/s). The counter
+    // ignores it, but it's the signal that separates a clean guided rep
+    // (weight stack, ~0 rotation) from a wobbling barbell (large rotation),
+    // which is where miscounts happen. Captured now so a future full-res
+    // dataset lets a bar-aware counter be built and verified on real data.
+    S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4),Math.round(S.gyRate)]);
     const r=S.det.push(S.aV,dt,t,gap);       // always run: keeps filters warm
     if(S.arming){
       // wait for the puck to be mounted and released, then begin
@@ -793,8 +798,12 @@ function commitSet(exName,n,corrected){
   // from a signal it never actually saw. Full-res is what makes learning
   // and live counting agree.
   const trace=p.rec;
+  // rotation summary — peak/mean deg/s over the set (bar vs machine tell)
+  let gPk=0,gSum=0,gN=0;
+  for(const f of trace){ const g=f[2]||0; if(g>gPk)gPk=g; gSum+=g; gN++; }
   DB.res.push({ts:p.ts,ex:exName,auto:S.pendAuto,truth:n,corrected:corrected,
     conf:+p.conf.toFixed(2),dur:Math.round(p.dur),hz:Math.round(S.hzDisp),
+    gyroPeak:gPk,gyroMean:gN?Math.round(gSum/gN):0,
     params:Object.assign({},ex.params),raw:trace});
   while(DB.res.length>80) DB.res.shift();
 
@@ -1099,7 +1108,7 @@ function stamp(){ return new Date().toISOString().slice(0,19).replace(/[:T]/g,'-
 function snapshot(){
   return {app:'IronCap',version:APP_VERSION,build:BUILD.shortCommit||'dev',
     exported:new Date().toISOString(),
-    note:'workouts[].sets have {ex,reps,w,e1,pr}; research[].raw = [[dt_ms, vertical_acceleration_g], ...]; truth = confirmed rep count',
+    note:'workouts[].sets have {ex,reps,w,e1,pr}; research[].raw = [[dt_ms, vertical_acceleration_g, rotation_dps], ...]; research[] also has gyroPeak/gyroMean (deg/s); truth = confirmed rep count',
     exercises:DB.ex,
     workouts:[...(DB.cur?[DB.cur]:[]),...DB.wk],
     research:DB.res};

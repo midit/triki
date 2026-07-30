@@ -230,8 +230,9 @@ Request types: `snapshot`, `workouts`, `exercises`, `version`.
   "workouts":  [ { "start": …, "end": …,
                    "sets": [ { "ex": "Squat", "reps": 10, "w": 100, "e1": 133.3,
                                "pr": ["1RM"], "ecc": 1.4, "ts": … } ] } ],
-  "research":  [ { "ts": …, "ex": "Squat", "auto": 9, "truth": 10,
-                   "corrected": true, "raw": [[dt_ms, vertical_accel_g], …] } ]
+  "research":  [ { "ts": …, "ex": "Squat", "auto": 9, "truth": 10, "corrected": true,
+                   "gyroPeak": 22, "gyroMean": 9,
+                   "raw": [[dt_ms, vertical_accel_g, rotation_dps], …] } ]
 }
 ```
 
@@ -279,9 +280,14 @@ triki_logger.py            desktop BLE logger (bleak) for capturing raw data
 
 ## Status and honest limitations
 
-- Detector defaults are fitted on **one** labelled exercise (squats). Other
-  exercises will need a few corrections before they are accurate.
-- Accuracy on presses, rows and machine work is **not yet measured**.
+- **Guided motion counts far better than free weights.** On a real leg day,
+  puck on the **weight stack** was 100 % accurate (7/7 sets exact); puck on a
+  **barbell** was ~83 % (0/9 exact) — the bar tilts, whips and bounces, so its
+  vertical signal is genuinely noisier. The mount is fine; the movement is the
+  hard part. The rotation rate (gyroscope) is now captured per set so a
+  bar-aware counter can be built and verified on real data.
+- Detector defaults are fitted on labelled squat data. Each new exercise needs
+  a few corrections before it settles.
 - The rep counter is the maintained part; the cadence app is an earlier
   experiment kept for reference.
 

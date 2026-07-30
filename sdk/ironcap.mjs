@@ -26,8 +26,10 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 /**
  * Count reps in a vertical-acceleration trace.
- * @param {[number,number][]} rec  frames as [dt_ms, vertical_acceleration_g]
- * @param {object} [params]        {sens, perMin, floor}
+ * @param {number[][]} rec  frames as [dt_ms, vertical_acceleration_g] or
+ *                          [dt_ms, vertical_acceleration_g, rotation_dps].
+ *                          A 3rd rotation column is ignored by the counter.
+ * @param {object} [params] {sens, perMin, floor}
  * @returns {{count:number, reps:{t:number,period:number,eccentric:number}[]}}
  */
 export function countTrace(rec, params = {}) {
@@ -105,6 +107,7 @@ export function parse(input) {
     ts: s.ts, exercise: s.exercise ?? s.ex, auto: s.auto, truth: s.truth,
     corrected: !!s.corrected, confidence: s.confidence ?? s.conf, durationSec: s.durationSec ?? s.dur,
     hz: s.hz, params: s.params, raw: s.raw,
+    gyroPeak: s.gyroPeak ?? null, gyroMean: s.gyroMean ?? null,   // rotation dps (bar vs machine)
   }));
   return { __ironcap: true, app: d.app || 'IronCap', version: d.version || null, exercises, workouts, research };
 }
