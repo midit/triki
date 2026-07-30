@@ -441,7 +441,12 @@ function makeDetector(p){
   let halfUp=0,halfDn=0;
   return {
     thr:0, sig:0, params:P,
-    reset(){ fast=slow=pv=pvHi=pvLo=0; st=0; tCycle=0; tDown=0; },
+    // rms and the refractory clock must reset too. They used to survive,
+    // so the threshold at the start of a set depended on arming-phase noise
+    // and an offline replay of the stored trace could not reproduce the live
+    // count — which is exactly what the learner trains on.
+    reset(){ fast=slow=pv=pvHi=pvLo=rms=0; st=0; tCycle=0; tDown=0; last=-99;
+             halfUp=0; halfDn=0; },
     /* returns {rep:true, per, ecc} when a full cycle completes */
     push(aV,dt,t,gap){
       if(gap) this.reset();
@@ -855,17 +860,27 @@ function retune(exName){
   if(!best) return '';
   const defErr=sm.reduce((a,s)=>a+Math.abs(countOffline(s.rec,DEF).length-s.truth),0);
   const tot=sm.reduce((a,s)=>a+s.truth,0);
-  if(sm.length<2){
-    return 'Noted "'+exName+'" — one more correction and I\'ll tune it (still on defaults).';
-  }
-  if(best.err>defErr){                     // fitted params are worse — keep defaults
+
+  // EVIDENCE GATE. A leave-one-out evaluation on 17 labelled arm-day sets
+  // showed the old rule (>=2 sets, beat defaults in-sample) made held-out
+  // accuracy WORSE than plain defaults: 80.9% vs 87.0%, 4/17 exact vs 8/17.
+  // Fitting three parameters to 2-3 noisy sets overfits. So: collect the
+  // corrections regardless (they are the dataset), but only ever replace the
+  // defaults on real evidence — at least MIN_LABELS sets, and a clear
+  // in-sample margin, not a tie.
+  const MIN_LABELS=4, MIN_GAIN=2;
+  if(sm.length<MIN_LABELS){
     ex.params=Object.assign({},DEF);
-    return '"'+exName+'" stays on defaults — this set\'s signal is too noisy to fit.';
+    return 'Logged "'+exName+'" ('+sm.length+'/'+MIN_LABELS+' corrections). '
+      +'Staying on defaults until there\'s enough to learn from.';
+  }
+  if(best.err > defErr-MIN_GAIN){          // no convincing gain — keep defaults
+    ex.params=Object.assign({},DEF);
+    return '"'+exName+'" stays on defaults — tuning didn\'t beat them convincingly.';
   }
   ex.params=best.p;
-  return best.err===0
-    ? 'Tuned "'+exName+'": exact on all '+sm.length+' labelled sets'
-    : 'Tuned "'+exName+'": off by '+best.err+' of '+tot+' reps across '+sm.length+' sets';
+  return 'Tuned "'+exName+'": '+defErr+' → '+best.err+' reps off across '
+    +sm.length+' labelled sets';
 }
 
 /* ══ REST TIMER ══ */
@@ -991,7 +1006,7 @@ function renderHist(){
       +'</small></div>'
       +'<div class="vol">'+(trained?'🎓':'—')+'</div></div>';
   }).join(''):'<div class="hint">No exercises yet.</div>';
-  $('h_wk').innerHTML=DB.wk.length?DB.wk.map(w=>{
+  $('h_wk').innerHTML=DB.wk.length?DB.wk.map((w,wi)=>{
     const d=new Date(w.start);
     const byEx={}; w.sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s);});
     const mins=Math.round(((w.end||w.start)-w.start)/60000);
@@ -1005,10 +1020,136 @@ function renderHist(){
         const cell=v?fmtKg(v)+' kg':ss.map(s=>s.reps).join(' · ');
         return '<div class="ex" style="padding:7px 0"><div class="nm" style="font-size:13px">'
           +esc(n)+'</div><div class="vol">'+cell+'</div></div>';}).join('')
+      +'<div class="btn gh shareBtn" data-i="'+wi+'" style="margin-top:8px;padding:9px">📤 Share card</div>'
       +'</div>';
   }).join(''):'<div class="hint">No finished workouts yet. Hold the cap button to finish one.</div>';
 }
 function fmtKg(v){ return Math.round(v).toLocaleString('en-US'); }   // 1485 -> "1,485"
+
+/* ══ SHAREABLE WORKOUT CARD ═══════════════════════════════════════════
+   Renders the workout to a canvas and hands it to the system share sheet
+   as a PNG — the same thing Strava/Hevy do, but the reps on it were
+   counted by a bottle cap.                                             */
+const MUSCLE=[[/curl|bicep|tricep|extension|pushdown|press.*close/i,'Arms 💪'],
+              [/squat|leg|calf|lunge|deadlift/i,'Legs 🦵'],
+              [/bench|chest|fly|dip/i,'Chest'],
+              [/row|pulldown|pull-?up|lat\b/i,'Back'],
+              [/shoulder|lateral|overhead|press/i,'Shoulders'],
+              [/ab|crunch|plank/i,'Core']];
+function workoutTitle(w){
+  const votes={};
+  for(const s of w.sets){ for(const [re,name] of MUSCLE){ if(re.test(s.ex)){ votes[name]=(votes[name]||0)+1; break; } } }
+  const top=Object.entries(votes).sort((a,b)=>b[1]-a[1])[0];
+  return top?top[0]:'Workout';
+}
+function drawCard(w){
+  const W=1080,H=1350,c=document.createElement('canvas');
+  c.width=W;c.height=H;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#0d1420');g.addColorStop(.55,'#0a0d12');g.addColorStop(1,'#111a26');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  // accent glow
+  const rg=x.createRadialGradient(W*.82,H*.12,0,W*.82,H*.12,520);
+  rg.addColorStop(0,'rgba(47,124,246,.22)');rg.addColorStop(1,'rgba(47,124,246,0)');
+  x.fillStyle=rg;x.fillRect(0,0,W,H);
+
+  const F=(s,wt)=>`${wt||700} ${s}px -apple-system,"SF Pro Text",Segoe UI,Roboto,sans-serif`;
+  const sets=w.sets, mins=Math.round(((w.end||w.start)-w.start)/60000);
+  const reps=sets.reduce((a,s)=>a+s.reps,0);
+  const vol=sets.reduce((a,s)=>a+(s.w||0)*s.reps,0);
+  const prs=sets.reduce((a,s)=>a+((s.pr&&s.pr.length)?1:0),0);
+
+  x.fillStyle='#6c7d95';
+  x.font=F(30,800);x.letterSpacing='6px';
+  x.fillText('IRONCAP',80,110);
+  x.letterSpacing='0px';
+  x.font=F(28,600);x.fillStyle='#55637a';
+  x.fillText(new Date(w.start).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}),80,158);
+
+  x.fillStyle='#e8edf5';x.font=F(96,800);
+  x.fillText(workoutTitle(w),80,268);
+
+  // stat blocks
+  const stats=[['DURATION',mins+' min'],['VOLUME',vol?fmtKg(vol)+' kg':'—'],
+               ['SETS',String(sets.length)],['REPS',String(reps)]];
+  let sy=340;
+  stats.forEach((s,i)=>{
+    const col=i%2, row=(i/2)|0, px=80+col*500, py=sy+row*150;
+    x.fillStyle='#131a25';roundRect(x,px,py,460,120,20);x.fill();
+    x.fillStyle='#6c7d95';x.font=F(22,700);x.letterSpacing='3px';
+    x.fillText(s[0],px+28,py+44);x.letterSpacing='0px';
+    x.fillStyle='#e8edf5';x.font=F(50,800);
+    x.fillText(s[1],px+28,py+98);
+  });
+
+  // exercises
+  let y=680;
+  x.fillStyle='#6c7d95';x.font=F(24,700);x.letterSpacing='3px';
+  x.fillText('EXERCISES',80,y);x.letterSpacing='0px';
+  y+=26;
+  const byEx={};sets.forEach(s=>{(byEx[s.ex]=byEx[s.ex]||[]).push(s);});
+  // reserve the bottom for the PR ribbon + footer, then fit as many rows as
+  // actually have room — otherwise the list ran under the ribbon
+  const ROW=62, bottomLimit=H-(prs?200:130);
+  const fits=Math.max(1,Math.floor((bottomLimit-y-40)/ROW));
+  const allNames=Object.keys(byEx);
+  const names=allNames.slice(0,Math.min(fits,8));
+  for(const n of names){
+    y+=ROW;
+    x.fillStyle='#e8edf5';x.font=F(34,700);
+    let label=n; while(x.measureText(label).width>640&&label.length>4) label=label.slice(0,-2);
+    if(label!==n) label+='…';
+    x.fillText(label,80,y);
+    const ss=byEx[n];
+    const txt=ss.map(s=>s.w?`${s.w}×${s.reps}`:`${s.reps}`).join('   ');
+    x.fillStyle='#8fa0b8';x.font=F(30,600);
+    x.textAlign='right';x.fillText(txt,W-80,y);x.textAlign='left';
+    x.strokeStyle='#1a2230';x.lineWidth=2;
+    x.beginPath();x.moveTo(80,y+22);x.lineTo(W-80,y+22);x.stroke();
+  }
+  if(allNames.length>names.length){
+    y+=50;x.fillStyle='#55637a';x.font=F(28,600);
+    x.fillText('+'+(allNames.length-names.length)+' more exercises',80,y);
+  }
+
+  // PR ribbon — sits under the list, not at a fixed offset
+  if(prs){
+    const ry=Math.min(y+42,H-190);
+    x.fillStyle='#1a1508';roundRect(x,80,ry,W-160,92,20);x.fill();
+    x.strokeStyle='#5a4a1a';x.lineWidth=2;roundRect(x,80,ry,W-160,92,20);x.stroke();
+    x.fillStyle='#ffd98a';x.font=F(38,700);
+    x.fillText('🏆  '+prs+' personal record'+(prs>1?'s':'')+' this session',116,ry+60);
+  }
+
+  // footer
+  x.fillStyle='#3a4553';x.font=F(26,600);
+  x.fillText('reps counted by a bottle cap · midit.github.io/triki',80,H-96);
+  x.fillStyle='#2fd07a';
+  x.beginPath();x.arc(W-104,H-104,14,0,7);x.fill();
+  return c;
+}
+function roundRect(x,px,py,w,h,r){
+  x.beginPath();x.moveTo(px+r,py);x.arcTo(px+w,py,px+w,py+h,r);
+  x.arcTo(px+w,py+h,px,py+h,r);x.arcTo(px,py+h,px,py,r);x.arcTo(px,py,px+w,py,r);x.closePath();
+}
+async function shareCard(w){
+  try{
+    const c=drawCard(w);
+    const blob=await new Promise(res=>c.toBlob(res,'image/png'));
+    if(!blob){ toast('Could not render card'); return; }
+    const name='ironcap_'+new Date(w.start).toISOString().slice(0,10)+'.png';
+    const file=new File([blob],name,{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file]}); return; }
+      catch(e){ if(e&&e.name==='AbortError') return; }
+    }
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=u;a.download=name;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),4000);
+    toast('Card saved');
+  }catch(e){ toast('Share failed: '+(e.message||e)); }
+}
 function ui(){
   $('chHz').textContent=S.hzDisp?S.hzDisp.toFixed(0)+' Hz':'— Hz';
   if(S.mode===0){
@@ -1141,6 +1282,10 @@ $('bCsv').onclick=exportCsv;
 $('bResearch').onclick=exportResearch;
 $('bDemo').onclick=()=>demo(!demoT);
 $('bEndWk').onclick=()=>{$('cfg').classList.remove('on');endWorkout();};
+$('h_wk').addEventListener('click',e=>{
+  const b=e.target.closest('.shareBtn'); if(!b) return;
+  const w=DB.wk[+b.dataset.i]; if(w) shareCard(w);
+});
 $('expCopy').onclick=async()=>{const t=$('expT');t.select();
   try{await navigator.clipboard.writeText(t.value);toast('Copied');}
   catch(e){document.execCommand('copy');toast('Copied');}};
