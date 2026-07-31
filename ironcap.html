@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="IronCap">
 <link rel="manifest" href="manifest.webmanifest">
-<title>IronCap — Triki Gym Rep Counter</title>
+<title>IronCap — Smart Gym Rep Counter</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:#0a0d12;color:#e8edf5;
@@ -240,7 +240,7 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
 </div>
 
 <div class="dock"><div class="dockin">
-  <div class="btn prim" id="bConn">Connect<span class="s">Triki</span></div>
+  <div class="btn prim" id="bConn">Connect<span class="s">sensor</span></div>
   <div class="btn ok" id="bSet">Start set<span class="s">1 click on cap</span></div>
   <div class="btn sq gh" id="bCfg">⚙</div>
 </div></div>
@@ -309,8 +309,11 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
     hold ~1.2 s — finish the workout<br><br>
     Nothing is counted outside a set, so walking between machines and
     racking the weight never reach your stats.<br><br>
-    <b>iOS:</b> needs the <b>Bluefy</b> browser. If Triki doesn't show up, press its
-    button to wake it first.
+    <b>iOS:</b> needs the <b>Bluefy</b> browser — Safari has no Web Bluetooth.
+    If your sensor doesn't appear, wake it first (most sleep to save the cell).<br><br>
+    <b>Supported sensors:</b> any Nordic UART (NUS) compatible IMU beacon that streams
+    accelerometer + gyroscope — e.g. Holyiot / MINEW nRF52 beacons, or the Żabka
+    bottle-cap puck. You connect your own device; IronCap only reads its motion stream.
   </div>
   <div class="row" style="border:0;justify-content:center">
     <span class="hint" id="buildInfo">build dev</span>
@@ -329,7 +332,9 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
 <script>
 "use strict";
 /* ══════════════════════════════════════════════════════════════════════
-   IronCap — turning a Zabka "Triki" BLE puck into a gym rep counter.
+   IronCap — a gym rep counter for Nordic UART (NUS) compatible IMU sensors.
+   Any beacon that streams accelerometer + gyroscope over NUS works; development
+   and validation were done with an nRF52 + LSM6DSL puck.
    Single-file Web Bluetooth PWA. Everything runs on the phone.
 
    HOW COUNTING WORKS
@@ -570,8 +575,8 @@ async function attach(dev){
   await wr(INIT1); await new Promise(r=>setTimeout(r,120));
   try{ await wr(initStream(CFG.lowRate?0x34:0x68)); }catch(e){}
   S.connected=true; S.running=true;
-  setStat(dev.name||'Triki','on');
-  $('bConn').innerHTML='Disconnect<span class="s">'+esc((dev.name||'Triki').slice(0,12))+'</span>';
+  setStat(dev.name||'Sensor','on');
+  $('bConn').innerHTML='Disconnect<span class="s">'+esc((dev.name||'Sensor').slice(0,12))+'</span>';
   $('bConn').classList.replace('prim','dan');
   battery(srv); wakeLock(); say('Connected');
 }
@@ -584,16 +589,16 @@ async function battery(srv){
 }
 function onDisc(){
   S.connected=false; setStat('link lost','err');
-  $('bConn').innerHTML='Connect<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
+  $('bConn').innerHTML='Connect<span class="s">sensor</span>'; $('bConn').classList.replace('dan','prim');
   // A set in progress would silently stall, so close it and keep the reps.
   if(S.live){ toast('Link lost — set closed, reps kept'); say('Link lost',true); endSet(true); }
-  else { toast('Triki disconnected'); say('Link lost',true); }
+  else { toast('Sensor disconnected'); say('Link lost',true); }
   if(S.dev) setTimeout(()=>{ if(!S.connected&&S.dev) attach(S.dev).catch(()=>{}); },2500);
 }
 function disconnect(){
   try{S.dev&&S.dev.gatt&&S.dev.gatt.connected&&S.dev.gatt.disconnect();}catch(e){}
   S.connected=false; setStat('not connected');
-  $('bConn').innerHTML='Connect<span class="s">Triki</span>'; $('bConn').classList.replace('dan','prim');
+  $('bConn').innerHTML='Connect<span class="s">sensor</span>'; $('bConn').classList.replace('dan','prim');
 }
 function setStat(t,c){ $('stat').textContent=t; $('dot').className='dot'+(c?' '+c:''); }
 
@@ -695,7 +700,7 @@ function physics(a,g,dt,t,gap,raw){
 /* ══ SET LIFECYCLE ══ */
 function startSet(){
   if(S.live) return;
-  if(!S.connected && !demoT){ toast('Connect Triki first'); beep(300,.12); return; }
+  if(!S.connected && !demoT){ toast('Connect a sensor first'); beep(300,.12); return; }
   // Arming phase. On free weights the flow is: mount the puck, press start,
   // then let go and get into position — all of which is motion that used to
   // be counted as fake reps. So counting is suppressed until the puck has
@@ -1109,7 +1114,7 @@ function renderWk(){
       +'<div class="setrow">'+ss.map(pill).join('')+'</div>'
       +'</div><div class="vol">'+(vol?fmtKg(vol)+'<br><span class="hint">kg</span>'
         :ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">reps</span>')+'</div></div>';
-  }).join(''):'<div class="hint">No sets yet. Attach Triki and press “start set”.</div>';
+  }).join(''):'<div class="hint">Stick the sensor on the weight, then press “start set”.</div>';
   $('r_count').textContent=DB.res.length+' sets logged';
 }
 function renderHist(){
@@ -1282,8 +1287,8 @@ function ui(){
     if(g!==S.goState){ S.goState=g; const el=$('goLive');
       el.classList.toggle('off', g==='x'); el.classList.toggle('stop', g==='a'||g==='l');
       el.innerHTML =
-        g==='x' ? 'CONNECT TRIKI<span>tap Connect below, or try the demo</span>' :
-        g==='r' ? 'START SET<span>or click the button on the cap</span>' :
+        g==='x' ? 'CONNECT A SENSOR<span>tap Connect below, or try the demo</span>' :
+        g==='r' ? 'STICK IT ON THE WEIGHT<span>then press here, or click the sensor button</span>' :
         g==='a' ? 'GET SET…<span>hold still — starts when the weight settles</span>' :
                   'FINISH SET<span>1 click · 2 clicks to cancel</span>'; }
     const last=S.setReps[S.setReps.length-1];
@@ -1335,7 +1340,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 /* ══ DEMO (no hardware needed) ══ */
 let demoT=null;
 function demo(on){
-  if(demoT){clearInterval(demoT);demoT=null;setStat(S.connected?'Triki':'not connected',S.connected?'on':'');
+  if(demoT){clearInterval(demoT);demoT=null;setStat(S.connected?'Sensor':'not connected',S.connected?'on':'');
     $('bDemo').textContent='Demo mode';return;}
   if(!on)return;
   const t0=now(); S.running=true; setStat('DEMO','warn'); $('bDemo').textContent='Stop demo';

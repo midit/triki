@@ -1,7 +1,7 @@
 {
-  "name": "IronCap — Triki Gym",
+  "name": "IronCap — Smart Gym Tracker",
   "short_name": "IronCap",
-  "description": "Rep counter for the gym built on the Zabka Triki BLE puck",
+  "description": "Hands-free rep counter for the gym. Works with Nordic UART compatible IMU sensors.",
   "start_url": "./ironcap.html",
   "scope": "./",
   "display": "standalone",

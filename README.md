@@ -1,26 +1,41 @@
-# IronCap — a gym rep counter built from a bottle-cap BLE toy
+# IronCap — hands-free rep counter for the gym
 
 [![CI/CD](https://github.com/midit/triki/actions/workflows/ci.yml/badge.svg)](https://github.com/midit/triki/actions/workflows/ci.yml)
 [![Live](https://img.shields.io/badge/live-midit.github.io%2Ftriki-2fd07a)](https://midit.github.io/triki/ironcap.html)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Żabka, a Polish convenience-store chain, gave away a small BLE gadget called
-**Triki** — a plastic bottle cap with a motion sensor inside, meant for playing
-tilt games in their loyalty app. It contains a genuinely decent IMU.
-
-This repo turns it into a **gym rep counter**. Glue a neodymium magnet to the
-back and it sticks to a weight stack, a plate, or a barbell. Everything runs in
-the browser on your phone over Web Bluetooth — no server, no account, no app
-store.
-
-| App | Link | What it does |
-|---|---|---|
-| **IronCap** | [`ironcap.html`](ironcap.html) | Counts reps on any exercise, tracks tempo, learns from your corrections, keeps a workout history |
-| **Cadence** | [`index.html`](index.html) | Earlier experiment: cycling cadence from the same puck |
+Stick a small motion sensor on the weight, lift, and the reps count themselves.
+No buttons to press mid-set, no phone in your hand. Everything runs in the
+browser on your phone over Web Bluetooth — no server, no account, no app store,
+and your data never leaves the device.
 
 **Live:** https://midit.github.io/triki/ironcap.html
 
-> Not affiliated with Żabka. Hardware documentation credit at the bottom.
+## Supported sensors
+
+IronCap is **hardware-agnostic**: it speaks the open **Nordic UART Service
+(NUS)** and reads any beacon that streams accelerometer + gyroscope over it.
+You connect your own device; the app just reads its motion stream.
+
+Known-working:
+
+| Sensor | Notes |
+|---|---|
+| **nRF52 + LSM6DSL beacons** (Holyiot, MINEW and similar) | Off-the-shelf, purchasable, magnet-friendly round cases |
+| **Żabka "Triki" bottle-cap puck** | The dev board this was built and validated on — cheap and widely available in Poland |
+
+Any sensor works as long as it exposes the NUS service, streams 14-byte IMU
+frames, and you know its scaling factors — see [Frame format](#frame-format--14-bytes).
+
+| App | Link | What it does |
+|---|---|---|
+| **IronCap** | [`ironcap.html`](ironcap.html) | Counts reps on any exercise, recognises the exercise, tracks tempo and PRs, learns from your corrections, keeps a workout history |
+| **Cadence** | [`index.html`](index.html) | Earlier experiment: cycling cadence from the same kind of sensor |
+
+> Independent open-source project. Not affiliated with, endorsed by, or
+> connected to Żabka, Holyiot, MINEW or Nordic Semiconductor. Device names are
+> used only to describe compatibility. Protocol details were documented by the
+> community for interoperability — credits at the bottom.
 
 ---
 
@@ -28,12 +43,15 @@ store.
 
 1. **iOS:** install [Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055).
    Safari does not support Web Bluetooth. **Android:** Chrome works.
-2. **Press the button on the cap** to wake it, then hit *Connect*. The device
-   sleeps to save its CR2032 and holds only **one** connection at a time.
-3. Stick it on the weight — orientation does not matter.
-4. Press *Start set*, do your reps, press it again. Confirm the count.
+2. **Wake the sensor** (most sleep to save the cell — press its button), then hit
+   *Connect*. Coin-cell beacons usually hold only **one** connection at a time.
+3. Stick it on the weight — orientation does not matter, the app finds vertical
+   from the gravity direction.
+4. Press *Start set*, do your reps, press it again. Confirm the count. Or just
+   start lifting: a steady rhythm auto-starts the set and back-fills the reps you
+   already did.
 
-The cap's button is the only physical control you need:
+If your sensor has a button, that is the only physical control you need:
 
 | Action | Result |
 |---|---|
@@ -92,25 +110,39 @@ transitions were the source of **every single** false positive.
 
 ## Learning from corrections
 
-Each exercise stores its own detector parameters plus the raw traces of its
-labelled sets. When you correct a count, a grid search looks for parameters
-that reproduce the true count across **all** labelled sets of that exercise at
-once. Among equally accurate candidates it picks the most **conservative** one,
-because corrections only ever supply positive examples — without that
-tie-break the search slides into over-sensitivity and starts counting noise.
+Every set is written to a research log with its raw trace, the automatic count
+and the count you confirmed. Export it from the **Data** tab — that dataset is
+the asset.
 
-This is parameter fitting, not a neural network, and that is deliberate: it
-works from a single example, runs in about 100 ms in a phone browser, and you
-can read exactly which numbers changed and why. On a real squat recording it
-went from 9 to a correct 10.
+Each exercise can also fit its own detector parameters from those labelled
+sets (grid search, conservative tie-break). But this is **gated on evidence**,
+and the gate exists because of a measurement: a leave-one-out evaluation over
+17 labelled sets showed that fitting three parameters to 2–3 noisy sets made
+held-out accuracy *worse* than plain defaults — 80.9 % versus 87.0 %. So tuned
+parameters only replace the defaults after **≥ 4 labelled sets** and a clear
+in-sample margin. Corrections are always collected; they are just not trusted
+early.
 
-Every set is also written to a research log with its raw trace and confirmed
-count. Export it from the **Data** tab — that dataset is what makes the counter
-better over time.
+Six ideas were tested against that dataset and **all lost to plain defaults** —
+rotation-aware thresholds, impact rejection, autocorrelation re-count,
+median-cadence rhythm repair, a per-exercise calibration ratio, and ungated
+parameter fitting. They are documented here so nobody re-tries them blind. The
+bottleneck is labelled sets per exercise, not cleverness.
+
+### Exercise recognition
+
+Each set's motion signature — rep cadence, rotation peak/mean, acceleration
+RMS and peak — identifies the exercise by nearest centroid. Leave-one-out over
+the 17 labelled sets: **82 % top-1, 100 % top-2**, against a 17 % chance
+baseline across 6 exercises. It pre-picks the exercise after a set; your choice
+always wins and updates the centroid.
 
 ---
 
-## Hardware
+## Reference hardware
+
+The protocol notes below describe the puck used for development. Any
+NUS-compatible IMU beacon follows the same pattern with its own scaling.
 
 | Part | Component |
 |---|---|
@@ -286,8 +318,17 @@ triki_logger.py            desktop BLE logger (bleak) for capturing raw data
   vertical signal is genuinely noisier. The mount is fine; the movement is the
   hard part. The rotation rate (gyroscope) is now captured per set so a
   bar-aware counter can be built and verified on real data.
+- **Overall measured accuracy is ~87 % of reps** (34 labelled sets across two
+  sessions, every label cross-checked against a manual log). Good enough to be
+  genuinely useful; not yet good enough to be relied on blindly, which is why
+  the app always asks you to confirm.
+- Failure modes differ per exercise and point in *opposite* directions — a
+  lying triceps extension roughly doubles, a hammer curl undercounts — so no
+  single global rule fixes both.
 - Detector defaults are fitted on labelled squat data. Each new exercise needs
   a few corrections before it settles.
+- **iOS needs the Bluefy browser**; Safari has no Web Bluetooth and Apple shows
+  no sign of adding it. Android Chrome works normally.
 - The rep counter is the maintained part; the cadence app is an earlier
   experiment kept for reference.
 
