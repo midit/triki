@@ -303,14 +303,16 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Battery saver<small>halves the sensor rate to 52 Hz — longer battery, but may miss fast reps. Reconnect to apply</small></label><div class="sw" id="oLow"></div></div>
   <div class="row" style="border-top:1px solid #17202c;padding-top:14px">
     <label>Coach sync<small>After you finish a workout, the session data is sent to a Telegram chat. Leave the fields empty to keep everything on this phone.</small></label></div>
-  <div class="row"><label>Your name<small>so the coach knows whose data it is</small></label>
-    <input type="text" id="tgName" placeholder="e.g. Andrii" style="width:130px"></div>
+  <div class="row"><label>Anonymous id<small>groups your sets together without naming you. No name, no device id, no clock times are ever sent.</small></label>
+    <span class="mono" id="tgPid" style="font-weight:700"></span>
+    <span class="btn gh" id="tgReroll" style="padding:8px 12px;font-size:12px">New id</span></div>
   <div class="row"><label>Bot token</label>
     <input type="text" id="tgTok" placeholder="123456:ABC-..." style="width:150px" autocomplete="off"></div>
   <div class="row"><label>Chat id</label>
     <input type="text" id="tgChat" placeholder="numeric id" style="width:150px" autocomplete="off"></div>
   <div class="row"><span class="btn" id="tgTest" style="flex:1">Test connection</span>
     <span class="btn" id="tgSendNow" style="flex:1">Send last workout</span></div>
+  <div class="row"><span class="btn gh" id="tgPreview" style="flex:1">See exactly what gets sent</span></div>
   <div class="row"><span class="hint" id="tgState"></span></div>
   <div class="row"><span class="btn" id="bEndWk" style="flex:1">Finish workout</span></div>
   <div class="row"><span class="btn dan" id="bWipe" style="flex:1">Erase all data</span></div>
@@ -337,6 +339,23 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="hint">Select all and copy, or use the button below.</div>
   <textarea class="exp" id="expT" readonly></textarea>
   <div class="btn prim" id="expCopy" style="margin-top:10px">Copy</div>
+</div></div>
+
+<!-- ====== FIRST RUN / UNSUPPORTED BROWSER ====== -->
+<div class="sheet" id="intro"><div class="sheetin">
+  <h2 style="font-size:22px">IronCap</h2>
+  <div class="hint" style="font-size:14px;line-height:1.6;color:#c6d2e2">
+    Stick a motion sensor on the weight. Lift. The reps count themselves —
+    no buttons mid-set, no phone in your hand.
+  </div>
+  <div id="introSteps" style="margin-top:16px">
+    <div class="ex"><div class="nm">1 · Wake the sensor<small>press its button, then tap Connect</small></div></div>
+    <div class="ex"><div class="nm">2 · Magnet it to the weight<small>stack, plate or bar — orientation doesn't matter</small></div></div>
+    <div class="ex"><div class="nm">3 · Just start lifting<small>a steady rhythm starts the set and counts back the reps you already did</small></div></div>
+    <div class="ex"><div class="nm">4 · Confirm the count<small>tap − / + if it got it wrong — that's how it learns</small></div></div>
+  </div>
+  <div id="introBt"></div>
+  <div class="row" style="border:0"><span class="btn prim" id="introOk" style="flex:1">Let's go</span></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -420,10 +439,15 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false,autoStart:true,
-  athlete:'', tgToken:'', tgChat:''};   // coach-sync creds live ONLY in localStorage
+  pid:'', tgToken:'', tgChat:''};       // coach-sync creds live ONLY in localStorage
 const PREROLL_S=25;        // seconds of signal kept before a set begins
 try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg4')||'{}'));}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));}catch(e){}};
+// Anonymous participant id. Lets the dataset be grouped per person for
+// per-athlete tuning without carrying a name — generated once, never sent
+// anywhere else, and the user can reroll it.
+function newPid(){ return 'p_'+Math.random().toString(36).slice(2,8); }
+if(!CFG.pid){ CFG.pid=newPid(); saveCfg(); }
 
 /* ══ PERSISTENT STORE ══
    ex   : exercise library (detector params + labelled traces)
@@ -1455,16 +1479,47 @@ function workoutCaption(w){
   const mins=Math.round(((w.end||w.start)-w.start)/60000);
   const corrected=w.sets.filter(s=>s.man).length;
   const names=[...new Set(w.sets.map(s=>s.ex))];
-  return (CFG.athlete||'anon')+' · '+workoutTitle(w)+'\n'
+  return CFG.pid+' · '+workoutTitle(w)+'\n'
     +w.sets.length+' sets · '+reps+' reps'+(vol?' · '+fmtKg(vol)+' kg':'')+' · '+mins+' min\n'
     +'corrected by hand: '+corrected+'/'+w.sets.length+'\n'
     +names.join(', ');
 }
+
+/* ══ ANONYMISED PAYLOAD ════════════════════════════════════════════════
+   Built by allow-list, not by deleting fields from a bigger object — that
+   way a new field added elsewhere can never leak by accident.
+   Carries: participant id, exercise names, counts, weights, tempo and the
+   raw motion traces. Deliberately NOT carried: any name, the BLE device
+   name, wall-clock timestamps (times are seconds relative to the start of
+   the workout, plus the calendar date) or personal-best records.        */
+function anonWorkout(w){
+  const t0=w.start, end=w.end||t0;
+  const sets=w.sets.map(s=>({
+    ex:s.ex, reps:s.reps, w:s.w||0, dur:s.dur, corrected:!!s.man, ecc:s.ecc||0,
+    t:Math.max(0,Math.round(((s.ts||t0)-t0)/1000))
+  }));
+  // research rows that belong to this workout window
+  const res=(DB.res||[]).filter(r=>r.ts>=t0-6e5&&r.ts<=end+6e5).map(r=>({
+    ex:r.ex, auto:r.auto, truth:r.truth, corrected:!!r.corrected, conf:r.conf,
+    dur:r.dur, hz:r.hz, gyroPeak:r.gyroPeak??null, gyroMean:r.gyroMean??null,
+    params:r.params, t:Math.max(0,Math.round((r.ts-t0)/1000)), raw:r.raw
+  }));
+  // exercise models only — no lastW, no personal records
+  const ex={};
+  for(const k in DB.ex){ const e=DB.ex[k];
+    ex[k]={params:e.params, per:e.per, used:e.used, labels:e.labels,
+           sig:e.sig||null, sigN:e.sigN||0}; }
+  return {app:'IronCap', version:APP_VERSION, build:BUILD.shortCommit||'dev',
+    participant:CFG.pid,
+    date:new Date(t0).toISOString().slice(0,10),
+    durationSec:Math.round((end-t0)/1000),
+    note:'times are seconds from workout start; raw = [[dt_ms, vertical_accel_g, rotation_dps], ...]',
+    sets, research:res, exercises:ex};
+}
 function sendWorkout(w){
   if(!syncOn()) return;
-  const doc=Object.assign(snapshot(),{athlete:CFG.athlete||'anon',workoutOnly:w});
-  const name='ironcap_'+(CFG.athlete||'anon').replace(/[^\w-]/g,'')+'_'
-    +new Date(w.start).toISOString().slice(0,10)+'.json';
+  const doc=anonWorkout(w);
+  const name='ironcap_'+CFG.pid+'_'+doc.date+'.json';
   queueUpload(name,JSON.stringify(doc),workoutCaption(w));
 }
 async function testSync(){
@@ -1474,8 +1529,8 @@ async function testSync(){
     const me=await (await fetch(TG_API+CFG.tgToken+'/getMe')).json();
     if(!me.ok) throw new Error(me.description||'bad token');
     await tgSendDoc('ironcap_test.json',
-      JSON.stringify({test:true,athlete:CFG.athlete||'anon',at:new Date().toISOString()}),
-      'IronCap test from '+(CFG.athlete||'anon')+' — sync works ✓');
+      JSON.stringify({test:true,participant:CFG.pid,version:APP_VERSION}),
+      'IronCap test from '+CFG.pid+' — sync works ✓');
     toast('Connected to @'+me.result.username+' ✓');
     $('tgTest').textContent='Works ✓';
   }catch(e){
@@ -1549,7 +1604,16 @@ function num(id,key){const e=$(id);e.value=CFG[key];
 sw('oWake','wake',wakeLock); sw('oAsk','ask'); sw('oAuto','autoStart',clearPre);
 function txt(id,key,after){const e=$(id); e.value=CFG[key]||'';
   e.onchange=()=>{CFG[key]=e.value.trim();saveCfg();after&&after();};}
-txt('tgName','athlete'); txt('tgTok','tgToken',updateSyncChip); txt('tgChat','tgChat',updateSyncChip);
+txt('tgTok','tgToken',updateSyncChip); txt('tgChat','tgChat',updateSyncChip);
+$('tgPid').textContent=CFG.pid;
+$('tgReroll').onclick=()=>{ if(!confirm('Start a new anonymous id? Past uploads keep the old one.'))return;
+  CFG.pid=newPid(); saveCfg(); $('tgPid').textContent=CFG.pid; toast('New id: '+CFG.pid); };
+$('tgPreview').onclick=()=>{
+  const w=DB.cur&&DB.cur.sets.length?Object.assign({},DB.cur,{end:Date.now()}):DB.wk[0];
+  if(!w){ toast('Do a set first, then you can inspect the payload'); return; }
+  $('expT').value=JSON.stringify(anonWorkout(w),null,1);
+  $('cfg').classList.remove('on'); $('exp').classList.add('on');
+};
 $('tgTest').onclick=testSync;
 $('tgSendNow').onclick=()=>{
   if(!syncOn()){ toast('Fill in bot token and chat id first'); return; }
@@ -1584,6 +1648,35 @@ if((DB.outbox||[]).length){                       // retry whatever the gym wifi
   setTimeout(flushOutbox,1500);
 }
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ══ FIRST RUN / BROWSER SUPPORT ═══════════════════════════════════════
+   Without this the app looks broken rather than unsupported: iOS Safari has
+   no Web Bluetooth at all, so Connect could only ever fail. Say so plainly
+   and point at a browser that works.                                     */
+function introBluetoothNote(){
+  if(navigator.bluetooth) return '';
+  const ios=/iP(hone|ad|od)/.test(navigator.userAgent)
+    ||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform||''));
+  return ios
+    ? '<div class="warnbox">This browser can\'t talk to Bluetooth — Safari on iOS has '
+      +'no Web Bluetooth, and that is Apple\'s decision, not a bug here.<br><br>'
+      +'Open this page in <b>Bluefy</b> (free) and everything works:<br>'
+      +'<a href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055" '
+      +'style="color:#8ec5ff">Get Bluefy on the App Store</a><br><br>'
+      +'Then paste this address into it:<br><span class="mono" style="font-size:11px">'
+      +esc(location.href)+'</span></div>'
+    : '<div class="warnbox">This browser has no Web Bluetooth. Use <b>Chrome</b> '
+      +'or <b>Edge</b> on Android, Windows, macOS or Linux.</div>';
+}
+function showIntro(force){
+  const note=introBluetoothNote();
+  if(!force && CFG.seenIntro && !note) return;      // only nag when it matters
+  $('introBt').innerHTML=note;
+  $('intro').classList.add('on');
+}
+$('introOk').onclick=()=>{ CFG.seenIntro=true; saveCfg(); $('intro').classList.remove('on'); audioResume(); };
+$('intro').onclick=e=>{ if(e.target===$('intro')) $('introOk').click(); };
+showIntro(false);
 
 /* ══ BUILD INFO (written by CI, fetched at runtime) ══ */
 let BUILD={shortCommit:'dev'};

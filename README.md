@@ -229,6 +229,23 @@ no backend: the Bot API is a plain HTTPS endpoint that permits cross-origin
 browser requests, so the static page calls `sendDocument` itself. Uploads are
 queued in local storage and retried, because gym signal is bad.
 
+### What is actually sent
+
+The payload is built by **allow-list**, so a field added elsewhere in the app
+can never leak into an upload by accident. Settings has a
+**See exactly what gets sent** button that prints the real JSON.
+
+| Sent | Not sent |
+|---|---|
+| Anonymous participant id (`p_7f3a91`) | Any name |
+| Exercise names, reps, weight, tempo | The BLE device name or id |
+| Raw motion traces, auto vs confirmed counts | Wall-clock timestamps — times are seconds from the start of the workout, plus the calendar date |
+| Detector parameters and motion signatures | Personal records or last-used weights |
+
+The participant id is generated on the device, groups that person's sets
+together so per-athlete tuning is possible without knowing who they are, and
+can be re-rolled from Settings at any time.
+
 Setup, per phone, in **Settings → Coach sync**:
 
 1. Create a bot with [@BotFather](https://t.me/BotFather) → `/newbot`, copy the token.
