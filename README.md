@@ -222,6 +222,31 @@ IronCap.countTrace(rawTrace).count;  // replay the detector on a raw signal
 IronCap.recount(researchSet, { sens: 1.1 });   // re-count with different params
 ```
 
+## Coach sync — datasets over Telegram, no server
+
+Finish a workout and its dataset is posted straight to a Telegram chat. There is
+no backend: the Bot API is a plain HTTPS endpoint that permits cross-origin
+browser requests, so the static page calls `sendDocument` itself. Uploads are
+queued in local storage and retried, because gym signal is bad.
+
+Setup, per phone, in **Settings → Coach sync**:
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) → `/newbot`, copy the token.
+2. Send your bot any message, then open
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`.
+3. Fill in name, token and chat id, then press **Test connection**.
+
+Leave the fields empty and nothing ever leaves the device.
+
+> **The token is never committed.** It is typed into Settings and lives only in
+> `localStorage`. A bot token pushed to a public repo is scraped within hours.
+> Anyone with physical access to a configured phone can read it back, so treat
+> it as shared-secret-grade: use a bot dedicated to this, and rotate it with
+> `/revoke` in BotFather if a tester leaves.
+>
+> Be straight with your testers: this uploads their workout data to you. The
+> app shows a ☁ indicator whenever sync is armed.
+
 ## Integration API
 
 The app exposes a **read-only** surface for other tools.

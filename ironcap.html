@@ -161,6 +161,7 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
     <span class="sp"></span>
     <span class="chip" id="chBat">🔋 —</span>
     <span class="chip" id="chHz">— Hz</span>
+    <span class="chip hide" id="chSync">☁ synced</span>
   </div>
 
   <div class="tabs" id="tabs">
@@ -300,6 +301,17 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Auto-stop set after, s<small>stillness longer than this ends the set</small></label>
     <input type="number" id="oIdle" value="20" min="4" max="90" step="1"></div>
   <div class="row"><label>Battery saver<small>halves the sensor rate to 52 Hz — longer battery, but may miss fast reps. Reconnect to apply</small></label><div class="sw" id="oLow"></div></div>
+  <div class="row" style="border-top:1px solid #17202c;padding-top:14px">
+    <label>Coach sync<small>After you finish a workout, the session data is sent to a Telegram chat. Leave the fields empty to keep everything on this phone.</small></label></div>
+  <div class="row"><label>Your name<small>so the coach knows whose data it is</small></label>
+    <input type="text" id="tgName" placeholder="e.g. Andrii" style="width:130px"></div>
+  <div class="row"><label>Bot token</label>
+    <input type="text" id="tgTok" placeholder="123456:ABC-..." style="width:150px" autocomplete="off"></div>
+  <div class="row"><label>Chat id</label>
+    <input type="text" id="tgChat" placeholder="numeric id" style="width:150px" autocomplete="off"></div>
+  <div class="row"><span class="btn" id="tgTest" style="flex:1">Test connection</span>
+    <span class="btn" id="tgSendNow" style="flex:1">Send last workout</span></div>
+  <div class="row"><span class="hint" id="tgState"></span></div>
   <div class="row"><span class="btn" id="bEndWk" style="flex:1">Finish workout</span></div>
   <div class="row"><span class="btn dan" id="bWipe" style="flex:1">Erase all data</span></div>
   <div class="hint" style="margin-top:12px">
@@ -407,7 +419,8 @@ const now=()=>performance.now()/1000;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false,autoStart:true};
+const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false,autoStart:true,
+  athlete:'', tgToken:'', tgChat:''};   // coach-sync creds live ONLY in localStorage
 const PREROLL_S=25;        // seconds of signal kept before a set begins
 try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg4')||'{}'));}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));}catch(e){}};
@@ -418,9 +431,9 @@ const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));
    cur  : the workout in progress — persisted so a reload mid-session
           never loses the day
    res  : research log, every set with its raw trace                      */
-let DB={ex:{},wk:[],cur:null,res:[]};
+let DB={ex:{},wk:[],cur:null,res:[],outbox:[]};
 try{ const d=JSON.parse(localStorage.getItem('ironcap.db')||'null');
-     if(d&&d.ex){ DB=Object.assign({ex:{},wk:[],cur:null,res:[]},d); } }catch(e){}
+     if(d&&d.ex){ DB=Object.assign({ex:{},wk:[],cur:null,res:[],outbox:[]},d); } }catch(e){}
 
 function saveDB(){
   try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); return true; }
@@ -1065,6 +1078,8 @@ function endWorkout(){
   const done=DB.wk[0], n=DB.cur.sets.length; DB.cur=null; saveDB(); renderWk(); renderHist();
   apiEmit('workout',JSON.parse(JSON.stringify(done)));
   toast('Workout saved: '+n+' sets'); say('Workout saved',true);
+  sendWorkout(done);                       // coach sync, if configured
+  updateSyncChip();
 }
 
 /* ══ CHART ══ */
@@ -1377,6 +1392,100 @@ function snapshot(){
     workouts:[...(DB.cur?[DB.cur]:[]),...DB.wk],
     research:DB.res};
 }
+/* ══ COACH SYNC ════════════════════════════════════════════════════════
+   Sends the finished workout's dataset straight to a Telegram chat, with no
+   server of our own: the Bot API is a plain HTTPS endpoint and permits
+   cross-origin browser calls (verified — a bad token answers 401 rather
+   than failing CORS), so a static page can POST sendDocument directly.
+
+   The bot token is NEVER in this repo. It is typed into Settings on the
+   device and lives only in localStorage — a token committed to a public
+   repo gets scraped within hours.
+
+   Sends are queued in DB.outbox and retried, because gyms have bad signal.  */
+const TG_API='https://api.telegram.org/bot';
+function syncOn(){ return !!(CFG.tgToken&&CFG.tgChat); }
+
+async function tgSendDoc(name,text,caption){
+  const fd=new FormData();
+  fd.append('chat_id',CFG.tgChat);
+  fd.append('document',new Blob([text],{type:'application/json'}),name);
+  if(caption) fd.append('caption',caption.slice(0,1000));
+  const r=await fetch(TG_API+CFG.tgToken+'/sendDocument',{method:'POST',body:fd});
+  const j=await r.json().catch(()=>({ok:false,description:'bad response'}));
+  if(!j.ok) throw new Error(j.description||('HTTP '+r.status));
+  return j;
+}
+function queueUpload(name,text,caption){
+  DB.outbox=DB.outbox||[];
+  DB.outbox.push({name,text,caption,ts:Date.now(),tries:0});
+  while(DB.outbox.length>12) DB.outbox.shift();      // don't grow forever
+  saveDB(); flushOutbox();
+}
+let flushing=false;
+async function flushOutbox(){
+  if(flushing||!syncOn()||!DB.outbox||!DB.outbox.length) return;
+  if(navigator.onLine===false) return;
+  flushing=true;
+  try{
+    while(DB.outbox.length){
+      const item=DB.outbox[0];
+      try{
+        await tgSendDoc(item.name,item.text,item.caption);
+        DB.outbox.shift(); saveDB();
+        toast('Sent to coach ✓');
+      }catch(e){
+        item.tries=(item.tries||0)+1; saveDB();
+        toast('Coach sync pending ('+item.tries+') — will retry');
+        break;                                        // stop, keep order
+      }
+    }
+  } finally { flushing=false; updateSyncChip(); }
+}
+function updateSyncChip(){
+  const el=$('chSync'); if(!el) return;
+  const pend=(DB.outbox||[]).length;
+  el.classList.toggle('hide',!syncOn());
+  el.innerHTML=pend?('☁ '+pend+' queued'):'☁ synced';
+  el.style.color=pend?'#ffd98a':'#6ee7a0';
+}
+function workoutCaption(w){
+  const reps=w.sets.reduce((a,s)=>a+s.reps,0);
+  const vol=w.sets.reduce((a,s)=>a+(s.w||0)*s.reps,0);
+  const mins=Math.round(((w.end||w.start)-w.start)/60000);
+  const corrected=w.sets.filter(s=>s.man).length;
+  const names=[...new Set(w.sets.map(s=>s.ex))];
+  return (CFG.athlete||'anon')+' · '+workoutTitle(w)+'\n'
+    +w.sets.length+' sets · '+reps+' reps'+(vol?' · '+fmtKg(vol)+' kg':'')+' · '+mins+' min\n'
+    +'corrected by hand: '+corrected+'/'+w.sets.length+'\n'
+    +names.join(', ');
+}
+function sendWorkout(w){
+  if(!syncOn()) return;
+  const doc=Object.assign(snapshot(),{athlete:CFG.athlete||'anon',workoutOnly:w});
+  const name='ironcap_'+(CFG.athlete||'anon').replace(/[^\w-]/g,'')+'_'
+    +new Date(w.start).toISOString().slice(0,10)+'.json';
+  queueUpload(name,JSON.stringify(doc),workoutCaption(w));
+}
+async function testSync(){
+  if(!syncOn()){ toast('Fill in bot token and chat id first'); return; }
+  $('tgTest').textContent='Testing…';
+  try{
+    const me=await (await fetch(TG_API+CFG.tgToken+'/getMe')).json();
+    if(!me.ok) throw new Error(me.description||'bad token');
+    await tgSendDoc('ironcap_test.json',
+      JSON.stringify({test:true,athlete:CFG.athlete||'anon',at:new Date().toISOString()}),
+      'IronCap test from '+(CFG.athlete||'anon')+' — sync works ✓');
+    toast('Connected to @'+me.result.username+' ✓');
+    $('tgTest').textContent='Works ✓';
+  }catch(e){
+    toast('Sync failed: '+(e.message||e));
+    $('tgTest').textContent='Test again';
+  }
+  updateSyncChip();
+}
+window.addEventListener('online',flushOutbox);
+
 async function exportResearch(){
   if(!DB.res.length&&!DB.wk.length&&!DB.cur){toast('Nothing to export yet');return;}
   await share(JSON.stringify(snapshot()), 'ironcap_dataset_'+stamp()+'.json', 'application/json');
@@ -1438,6 +1547,15 @@ function sw(id,key,after){const e=$(id);e.classList.toggle('on',!!CFG[key]);
 function num(id,key){const e=$(id);e.value=CFG[key];
   e.onchange=()=>{const v=parseFloat(e.value);if(!isNaN(v)){CFG[key]=v;saveCfg();}};}
 sw('oWake','wake',wakeLock); sw('oAsk','ask'); sw('oAuto','autoStart',clearPre);
+function txt(id,key,after){const e=$(id); e.value=CFG[key]||'';
+  e.onchange=()=>{CFG[key]=e.value.trim();saveCfg();after&&after();};}
+txt('tgName','athlete'); txt('tgTok','tgToken',updateSyncChip); txt('tgChat','tgChat',updateSyncChip);
+$('tgTest').onclick=testSync;
+$('tgSendNow').onclick=()=>{
+  if(!syncOn()){ toast('Fill in bot token and chat id first'); return; }
+  if(!DB.wk.length){ toast('No finished workout yet'); return; }
+  sendWorkout(DB.wk[0]);
+};
 sw('oLow','lowRate',()=>{ if(S.connected&&S.chW){
   const wr=v=>S.chW.writeValueWithoutResponse?S.chW.writeValueWithoutResponse(v):S.chW.writeValue(v);
   try{ wr(initStream(CFG.lowRate?0x34:0x68)); toast(CFG.lowRate?'52 Hz — battery saver on':'104 Hz — full accuracy'); }
@@ -1460,6 +1578,11 @@ document.addEventListener('click',audioResume);
 S.det=makeDetector(DEF);
 if(DB.cur&&DB.cur.sets&&DB.cur.sets.length) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
 setMode(0); renderWk(); renderHist(); ui();
+updateSyncChip();
+if((DB.outbox||[]).length){                       // retry whatever the gym wifi ate
+  $('tgState').textContent=DB.outbox.length+' upload(s) waiting to be sent';
+  setTimeout(flushOutbox,1500);
+}
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
 /* ══ BUILD INFO (written by CI, fetched at runtime) ══ */
