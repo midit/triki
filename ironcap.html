@@ -322,12 +322,12 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Anonymous id<small>groups your sets together without naming you. No name, no device id, no clock times are ever sent.</small></label>
     <span class="mono" id="tgPid" style="font-weight:700"></span>
     <span class="btn gh" id="tgReroll" style="padding:8px 12px;font-size:12px">New id</span></div>
-  <div class="row"><label>Bot token</label>
-    <input type="text" id="tgTok" placeholder="123456:ABC-..." style="width:150px" autocomplete="off"></div>
-  <div class="row"><label>Chat id</label>
-    <input type="text" id="tgChat" placeholder="numeric id" style="width:150px" autocomplete="off"></div>
-  <div class="row"><span class="btn" id="tgTest" style="flex:1">Test connection</span>
-    <span class="btn" id="tgSendNow" style="flex:1">Send last workout</span></div>
+  <div class="row"><label>Collector URL<small>Optional. Paste the address of your collector and workouts upload themselves. It is not a secret — no token ever sits on this phone.</small></label></div>
+  <div class="row" style="border:0"><input type="text" id="tgUrl" placeholder="https://…/upload" autocomplete="off" spellcheck="false"></div>
+  <div class="row"><span class="btn" id="tgTest" style="flex:1">Test</span>
+    <span class="btn" id="tgSendNow" style="flex:1">Upload last</span></div>
+  <div class="row"><span class="btn prim" id="tgShare" style="flex:1">📤 Share last workout</span></div>
+  <div class="row" style="border:0"><span class="hint">No URL? Use Share — it hands the file to Telegram, mail or anything else, with nothing to set up.</span></div>
   <div class="row"><span class="btn gh" id="tgPreview" style="flex:1">See exactly what gets sent</span></div>
   <div class="row"><span class="hint" id="tgState"></span></div>
   <div class="row"><span class="btn" id="bEndWk" style="flex:1">Finish workout</span></div>
@@ -455,7 +455,7 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false,autoStart:true,
-  pid:'', tgToken:'', tgChat:''};       // coach-sync creds live ONLY in localStorage
+  pid:'', upUrl:''};                    // a URL, not a credential
 const PREROLL_S=60;        // seconds of raw signal kept before a set begins
 const RHYTHM_WIN_S=25;     // window the auto-start gate judges cadence over
 // These are deliberately different. Measured on 39 real sets, the gate needs
@@ -1517,29 +1517,37 @@ function snapshot(){
     research:DB.res};
 }
 /* ══ COACH SYNC ════════════════════════════════════════════════════════
-   Sends the finished workout's dataset straight to a Telegram chat, with no
-   server of our own: the Bot API is a plain HTTPS endpoint and permits
-   cross-origin browser calls (verified — a bad token answers 401 rather
-   than failing CORS), so a static page can POST sendDocument directly.
+   Uploads a finished workout's dataset to one collection endpoint.
 
-   The bot token is NEVER in this repo. It is typed into Settings on the
-   device and lives only in localStorage — a token committed to a public
-   repo gets scraped within hours.
+   There is deliberately NO credential on the device. Earlier this posted
+   straight to the Telegram Bot API, which meant a bot token had to be typed
+   into every tester's phone — inconvenient to set up and a secret sitting in
+   someone else's localStorage. Now the app only knows a URL, which is not a
+   secret: the worst it allows is someone posting junk to your own collector.
+   Any token lives server-side in the collector (see worker/ironcap-upload.js
+   for a ~30-line Cloudflare Worker that forwards to Telegram).
+
+   The body is sent as text/plain on purpose: that keeps it a "simple" CORS
+   request, so no preflight is needed and endpoints that don't implement
+   OPTIONS still work.
+
+   With no URL configured nothing is uploaded and nothing is lost — the
+   workout can be handed over through the normal share sheet instead.
 
    Sends are queued in DB.outbox and retried, because gyms have bad signal.  */
-const TG_API='https://api.telegram.org/bot';
-function syncOn(){ return !!(CFG.tgToken&&CFG.tgChat); }
+function syncOn(){ return !!CFG.upUrl; }
 
-async function tgSendDoc(name,text,caption){
-  const fd=new FormData();
-  fd.append('chat_id',CFG.tgChat);
-  fd.append('document',new Blob([text],{type:'application/json'}),name);
-  if(caption) fd.append('caption',caption.slice(0,1000));
-  const r=await fetch(TG_API+CFG.tgToken+'/sendDocument',{method:'POST',body:fd});
-  const j=await r.json().catch(()=>({ok:false,description:'bad response'}));
-  if(!j.ok) throw new Error(j.description||('HTTP '+r.status));
-  return j;
+async function postUpload(name,text,caption){
+  const r=await fetch(CFG.upUrl,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},   // simple request, no preflight
+    body:JSON.stringify({app:'IronCap',name:name,caption:caption||'',
+      participant:CFG.pid,payload:JSON.parse(text)})
+  });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return true;
 }
+
 function queueUpload(name,text,caption,covers){
   DB.outbox=DB.outbox||[];
   DB.outbox.push({name,text,caption,covers,ts:Date.now(),tries:0});
@@ -1555,7 +1563,7 @@ async function flushOutbox(){
     while(DB.outbox.length){
       const item=DB.outbox[0];
       try{
-        await tgSendDoc(item.name,item.text,item.caption);
+        await postUpload(item.name,item.text,item.caption);
         // Delivered — the raw traces now exist in the chat, so the local
         // copies can be released. The counts stay.
         if(item.covers){ let n=0;
@@ -1634,21 +1642,24 @@ function sendWorkout(w){
     {from:w.start-6e5,to:(w.end||w.start)+6e5});
 }
 async function testSync(){
-  if(!syncOn()){ toast('Fill in bot token and chat id first'); return; }
-  $('tgTest').textContent='Testing…';
+  if(!syncOn()){ toast('Paste a collector URL first'); return; }
+  $('tgTest').textContent='Testing...';
   try{
-    const me=await (await fetch(TG_API+CFG.tgToken+'/getMe')).json();
-    if(!me.ok) throw new Error(me.description||'bad token');
-    await tgSendDoc('ironcap_test.json',
+    await postUpload('ironcap_test.json',
       JSON.stringify({test:true,participant:CFG.pid,version:APP_VERSION}),
-      'IronCap test from '+CFG.pid+' — sync works ✓');
-    toast('Connected to @'+me.result.username+' ✓');
-    $('tgTest').textContent='Works ✓';
+      'IronCap test from '+CFG.pid);
+    toast('Collector accepted the upload'); $('tgTest').textContent='Works';
   }catch(e){
-    toast('Sync failed: '+(e.message||e));
-    $('tgTest').textContent='Test again';
+    toast('Upload failed: '+(e.message||e)); $('tgTest').textContent='Test again';
   }
   updateSyncChip();
+}
+/* No collector configured? Hand the file over through the share sheet —
+   zero setup, nothing to paste, works on any phone. */
+async function shareWorkoutFile(w){
+  if(!w){ toast('No finished workout yet'); return; }
+  const doc=anonWorkout(w);
+  await share(JSON.stringify(doc),'ironcap_'+CFG.pid+'_'+doc.date+'.json','application/json');
 }
 window.addEventListener('online',flushOutbox);
 
@@ -1720,7 +1731,7 @@ function num(id,key){const e=$(id);e.value=CFG[key];
 sw('oWake','wake',wakeLock); sw('oAsk','ask'); sw('oAuto','autoStart',clearPre);
 function txt(id,key,after){const e=$(id); e.value=CFG[key]||'';
   e.onchange=()=>{CFG[key]=e.value.trim();saveCfg();after&&after();};}
-txt('tgTok','tgToken',updateSyncChip); txt('tgChat','tgChat',updateSyncChip);
+txt('tgUrl','upUrl',updateSyncChip);
 $('tgPid').textContent=CFG.pid;
 function renderCrewList(){
   $('crewList').innerHTML=CFG.crew.map((c,i)=>
@@ -1755,10 +1766,12 @@ $('tgPreview').onclick=()=>{
 };
 $('tgTest').onclick=testSync;
 $('tgSendNow').onclick=()=>{
-  if(!syncOn()){ toast('Fill in bot token and chat id first'); return; }
+  if(!syncOn()){ toast('Paste a collector URL, or use Share'); return; }
   if(!DB.wk.length){ toast('No finished workout yet'); return; }
   sendWorkout(DB.wk[0]);
 };
+$('tgShare').onclick=()=>shareWorkoutFile(DB.wk[0]||
+  (DB.cur&&DB.cur.sets.length?Object.assign({},DB.cur,{end:Date.now()}):null));
 sw('oLow','lowRate',()=>{ if(S.connected&&S.chW){
   const wr=v=>S.chW.writeValueWithoutResponse?S.chW.writeValueWithoutResponse(v):S.chW.writeValue(v);
   try{ wr(initStream(CFG.lowRate?0x34:0x68)); toast(CFG.lowRate?'52 Hz — battery saver on':'104 Hz — full accuracy'); }

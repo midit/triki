@@ -234,47 +234,59 @@ set never wipes your PR or prefills your weight. Names stay on the phone;
 uploads carry only each person's anonymous id, and a session with two lifters
 arrives as one file with the sets tagged individually.
 
-## Coach sync — datasets over Telegram, no server
+## Coach sync — collecting datasets from testers
 
-Finish a workout and its dataset is posted straight to a Telegram chat. There is
-no backend: the Bot API is a plain HTTPS endpoint that permits cross-origin
-browser requests, so the static page calls `sendDocument` itself. Uploads are
-queued in local storage and retried, because gym signal is bad.
+Two ways to get a finished workout off a tester's phone. Neither puts a
+credential on the device.
+
+**1. Share sheet — nothing to set up.** Settings → *Share last workout* hands
+the file to Telegram, mail or anything else installed. One tap, no accounts,
+no configuration. Good enough for a handful of friends.
+
+**2. Collector URL — fully automatic.** Paste one address into Settings and
+finished workouts upload themselves, queued in local storage and retried
+because gym signal is bad. The address is **not a secret**: the worst a leak
+allows is someone posting junk to your own collector, which you fix by
+rotating the URL. Any real token stays server-side.
+
+[`worker/ironcap-upload.js`](worker/ironcap-upload.js) is a ~30-line Cloudflare
+Worker (free tier) that accepts an upload and forwards it to Telegram as a
+file:
+
+```bash
+npm i -g wrangler && wrangler login
+wrangler deploy worker/ironcap-upload.js --name ironcap-upload
+wrangler secret put BOT_TOKEN     # from @BotFather
+wrangler secret put CHAT_ID       # your numeric chat id
+wrangler secret put UPLOAD_KEY    # optional, adds ?k=... to the URL
+```
+
+Then paste `https://ironcap-upload.<you>.workers.dev/upload` into every
+tester's phone once. Any endpoint works — the app POSTs `text/plain` so the
+request stays "simple" and no CORS preflight is involved.
+
+> An earlier version called the Telegram Bot API straight from the page. That
+> worked, but a bot token had to be typed into each tester's phone, which is
+> both awkward to set up and a secret living in someone else's browser. The
+> URL indirection removes it.
 
 ### What is actually sent
 
-The payload is built by **allow-list**, so a field added elsewhere in the app
-can never leak into an upload by accident. Settings has a
+Both routes send the same document, built by **allow-list** so a field added
+elsewhere in the app can never leak into an upload by accident. Settings has a
 **See exactly what gets sent** button that prints the real JSON.
 
 | Sent | Not sent |
 |---|---|
-| Anonymous participant id (`p_7f3a91`) | Any name |
+| Anonymous participant id (`p_7f3a91`) | Any name or partner label |
 | Exercise names, reps, weight, tempo | The BLE device name or id |
-| Raw motion traces, auto vs confirmed counts | Wall-clock timestamps — times are seconds from the start of the workout, plus the calendar date |
+| Raw motion traces, auto vs confirmed counts, how the set started | Wall-clock timestamps — times are seconds from the start of the workout, plus the calendar date |
 | Detector parameters and motion signatures | Personal records or last-used weights |
 
-The participant id is generated on the device, groups that person's sets
-together so per-athlete tuning is possible without knowing who they are, and
-can be re-rolled from Settings at any time.
-
-Setup, per phone, in **Settings → Coach sync**:
-
-1. Create a bot with [@BotFather](https://t.me/BotFather) → `/newbot`, copy the token.
-2. Send your bot any message, then open
-   `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`.
-3. Fill in name, token and chat id, then press **Test connection**.
-
-Leave the fields empty and nothing ever leaves the device.
-
-> **The token is never committed.** It is typed into Settings and lives only in
-> `localStorage`. A bot token pushed to a public repo is scraped within hours.
-> Anyone with physical access to a configured phone can read it back, so treat
-> it as shared-secret-grade: use a bot dedicated to this, and rotate it with
-> `/revoke` in BotFather if a tester leaves.
->
-> Be straight with your testers: this uploads their workout data to you. The
-> app shows a ☁ indicator whenever sync is armed.
+The participant id is generated on the device, groups that person's sets so
+per-athlete tuning is possible without knowing who they are, and can be
+re-rolled from Settings. A session with two lifters arrives as one file with
+each set tagged by id.
 
 ## Integration API
 
@@ -358,6 +370,7 @@ ironcap.html               the gym app (self-contained, no dependencies)
 index.html                 cycling cadence app
 manifest.webmanifest       PWA manifest
 sw.js                      service worker, offline shell
+worker/ironcap-upload.js   optional Cloudflare Worker that collects uploads
 sdk/ironcap.mjs            analytics SDK + reference detector (browser & Node)
 test/                      unit tests (node --test)
 .github/workflows/ci.yml   test + deploy pipeline
