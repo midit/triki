@@ -233,6 +233,7 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
       <div class="hd">Research log <span class="sp"></span><span id="r_count">0 sets</span></div>
       <div class="hint">Every set is stored with its raw vertical-acceleration trace and the
         confirmed rep count. This is the dataset the counter learns from — export it and keep it safe.</div>
+      <div class="hint" id="r_store" style="margin-top:6px"></div>
       <div class="row" style="border:0">
         <span class="btn prim" id="bResearch" style="flex:2">Export dataset (JSON)</span>
         <span class="btn" id="bCsv" style="flex:1">Raw CSV</span>
@@ -486,19 +487,48 @@ let DB={ex:{},wk:[],cur:null,res:[],outbox:[]};
 try{ const d=JSON.parse(localStorage.getItem('ironcap.db')||'null');
      if(d&&d.ex){ DB=Object.assign({ex:{},wk:[],cur:null,res:[],outbox:[]},d); } }catch(e){}
 
+const STORE_BUDGET=3.3*1024*1024;   // stay well under the ~5 MB localStorage cap
+const SAMPLE_CAP=24;                // learning traces kept across ALL exercises
+
+function dbBytes(){ try{ return JSON.stringify(DB).length; }catch(e){ return 0; } }
+
+/* Keep the store inside budget WITHOUT losing labels.
+   A row's counts are a few dozen bytes; its raw trace is ~45 KB. So we shed
+   traces, never rows — a confirmed count is the thing we are collecting.
+   Traces already delivered to the coach go first: those are safe elsewhere. */
+function pruneStore(){
+  let freed=0;
+  // 1. traces whose workout has been uploaded — a copy exists in the chat
+  for(const r of DB.res) if(r.sent&&r.raw){ delete r.raw; freed++; }
+  // 2. learning samples above the global cap, taken from whichever exercise
+  //    has the most so every exercise keeps a fair shot at the >=4 it needs
+  const total=()=>Object.values(DB.ex).reduce((a,e)=>a+((e.samples||[]).length),0);
+  let guard=0;
+  while(total()>SAMPLE_CAP && guard++<200){
+    let big=null;
+    for(const k in DB.ex){ const n=(DB.ex[k].samples||[]).length;
+      if(!big||n>big.n) big={k,n}; }
+    if(!big||big.n<=1) break;
+    DB.ex[big.k].samples.shift(); freed++;
+  }
+  // 3. still too big: shed the oldest remaining traces, keeping the rows
+  for(let i=0;i<DB.res.length&&dbBytes()>STORE_BUDGET;i++){
+    if(DB.res[i].raw){ delete DB.res[i].raw; freed++; }
+  }
+  return freed;
+}
 function saveDB(){
+  if(dbBytes()>STORE_BUDGET) pruneStore();
   try{ localStorage.setItem('ironcap.db',JSON.stringify(DB)); return true; }
   catch(e){
-    // Storage is full. Drop raw traces oldest-first — never drop counts.
-    let freed=false;
-    while(DB.res.length>10){ const r=DB.res.shift(); if(r&&r.raw) freed=true; }
-    for(const k in DB.ex){ const s=DB.ex[k].samples||[]; while(s.length>3){ s.shift(); freed=true; } }
+    const freed=pruneStore();
     try{ localStorage.setItem('ironcap.db',JSON.stringify(DB));
-         if(freed) toast('Storage was full — oldest raw traces dropped'); return true; }
+         if(freed) toast('Storage tight — '+freed+' raw trace(s) released'); return true; }
     catch(e2){
-      for(const r of DB.res) delete r.raw;
+      for(const r of DB.res) delete r.raw;          // last resort: counts survive
+      for(const k in DB.ex) DB.ex[k].samples=[];
       try{ localStorage.setItem('ironcap.db',JSON.stringify(DB));
-           toast('Storage full — raw traces dropped, counts kept'); return true; }
+           toast('Storage full — traces dropped, all counts kept'); return true; }
       catch(e3){ toast('Cannot save: storage full'); return false; }
     }
   }
@@ -728,7 +758,7 @@ function physics(a,g,dt,t,gap,raw){
     // (weight stack, ~0 rotation) from a wobbling barbell (large rotation),
     // which is where miscounts happen. Captured now so a future full-res
     // dataset lets a bar-aware counter be built and verified on real data.
-    S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(4),Math.round(S.gyRate)]);
+    S.setRec.push([Math.round(raw*1000),+S.aV.toFixed(3),Math.round(S.gyRate)]);
     const r=S.det.push(S.aV,dt,t,gap);       // always run: keeps filters warm
     if(S.arming){
       // wait for the puck to be mounted and released, then begin
@@ -1197,7 +1227,14 @@ function renderWk(){
       +'</div><div class="vol">'+(vol?fmtKg(vol)+'<br><span class="hint">kg</span>'
         :ss.reduce((a,s)=>a+s.reps,0)+'<br><span class="hint">reps</span>')+'</div></div>';
   }).join(''):'<div class="hint">Stick the sensor on the weight, then press “start set”.</div>';
-  $('r_count').textContent=DB.res.length+' sets logged';
+  const kb=dbBytes()/1024, pct=Math.min(100,Math.round(dbBytes()/STORE_BUDGET*100));
+  const withRaw=DB.res.filter(r=>r.raw).length;
+  $('r_count').innerHTML=DB.res.length+' sets · '
+    +(kb>1024?(kb/1024).toFixed(1)+' MB':Math.round(kb)+' KB')
+    +' <span style="color:'+(pct>85?'#ff8f9a':pct>60?'#ffd98a':'#6ee7a0')+'">'+pct+'%</span>';
+  const st=$('r_store');
+  if(st) st.textContent=withRaw+' of '+DB.res.length+' sets still hold a raw trace'
+    +(syncOn()?' — delivered ones are released automatically':'');
 }
 function renderHist(){
   const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
@@ -1503,9 +1540,9 @@ async function tgSendDoc(name,text,caption){
   if(!j.ok) throw new Error(j.description||('HTTP '+r.status));
   return j;
 }
-function queueUpload(name,text,caption){
+function queueUpload(name,text,caption,covers){
   DB.outbox=DB.outbox||[];
-  DB.outbox.push({name,text,caption,ts:Date.now(),tries:0});
+  DB.outbox.push({name,text,caption,covers,ts:Date.now(),tries:0});
   while(DB.outbox.length>12) DB.outbox.shift();      // don't grow forever
   saveDB(); flushOutbox();
 }
@@ -1519,6 +1556,13 @@ async function flushOutbox(){
       const item=DB.outbox[0];
       try{
         await tgSendDoc(item.name,item.text,item.caption);
+        // Delivered — the raw traces now exist in the chat, so the local
+        // copies can be released. The counts stay.
+        if(item.covers){ let n=0;
+          for(const r of DB.res)
+            if(r.ts>=item.covers.from && r.ts<=item.covers.to){ r.sent=1; if(r.raw){delete r.raw;n++;} }
+          if(n) console.info('[ironcap] released '+n+' delivered traces');
+        }
         DB.outbox.shift(); saveDB();
         toast('Sent to coach ✓');
       }catch(e){
@@ -1586,7 +1630,8 @@ function sendWorkout(w){
   if(!syncOn()) return;
   const doc=anonWorkout(w);
   const name='ironcap_'+CFG.pid+'_'+doc.date+'.json';
-  queueUpload(name,JSON.stringify(doc),workoutCaption(w));
+  queueUpload(name,JSON.stringify(doc),workoutCaption(w),
+    {from:w.start-6e5,to:(w.end||w.start)+6e5});
 }
 async function testSync(){
   if(!syncOn()){ toast('Fill in bot token and chat id first'); return; }
