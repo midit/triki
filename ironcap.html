@@ -455,7 +455,13 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 
 const CFG={audio:'voice',vol:30,wake:true,rest:90,ecc:1.0,ask:true,idle:20,lowRate:false,autoStart:true,
   pid:'', tgToken:'', tgChat:''};       // coach-sync creds live ONLY in localStorage
-const PREROLL_S=25;        // seconds of signal kept before a set begins
+const PREROLL_S=60;        // seconds of raw signal kept before a set begins
+const RHYTHM_WIN_S=25;     // window the auto-start gate judges cadence over
+// These are deliberately different. Measured on 39 real sets, the gate needs
+// a median of 22 s (worst 51 s) before it can be sure, so a 25 s signal buffer
+// dropped up to 2 early reps before it fired. The evidence window stays at
+// 25 s though — widening it would let stray detections from walking pile up
+// and sneak past the gate.
 try{Object.assign(CFG,JSON.parse(localStorage.getItem('ironcap.cfg4')||'{}'));}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));}catch(e){}};
 // Anonymous participant id. Lets the dataset be grouped per person for
@@ -744,7 +750,7 @@ function physics(a,g,dt,t,gap,raw){
     while(S.preT>PREROLL_S && S.pre.length){ S.preT-=S.pre[0][0]/1000; S.pre.shift(); }
     const r=S.det?S.det.push(S.aV,dt,t,gap):null;   // background detector
     if(r){ S.preReps.push(t); while(S.preReps.length>8) S.preReps.shift(); }
-    while(S.preReps.length && t-S.preReps[0]>PREROLL_S) S.preReps.shift();
+    while(S.preReps.length && t-S.preReps[0]>RHYTHM_WIN_S) S.preReps.shift();
     if(CFG.autoStart && !S.restOn && S.connected) maybeAutoStart(t);
   }
 
@@ -768,7 +774,8 @@ function startSet(){
   // If reps were already happening, don't discard them: adopt the pre-roll
   // and skip arming entirely — the lifter is clearly already under load.
   if(CFG.autoStart && S.preReps.length>=2){ adoptPreroll(false); return; }
-  S.live=true; S.arming=true; S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
+  S.live=true; S.arming=true; S.autoStarted=false;
+  S.setT0=now(); S.lastMove=now(); S.setRec=[]; S.setReps=[];
   S.det=makeDetector(currentParams());
   clearPre();
   sfxStart(); say('Get set',true);
@@ -851,7 +858,8 @@ function endSet(auto){
   const dur=now()-S.setT0, n=S.setReps.length;
   if(n<1){ toast(auto?'Empty set — discarded':'No reps detected'); beep(300,.12); return; }
   sfxStop();
-  S.pend={reps:S.setReps.slice(),rec:S.setRec.slice(),dur:dur,ts:Date.now()};
+  S.pend={reps:S.setReps.slice(),rec:S.setRec.slice(),dur:dur,ts:Date.now(),
+    started:S.autoStarted?'auto':'manual'};   // measurable next session
   S.pendN=n; S.pendAuto=n;
   S.pend.conf=confidence(S.setReps,S.pendEx);
   say(n+' reps',true);
@@ -999,6 +1007,7 @@ function commitSet(exName,n,corrected){
   for(const f of trace){ const g=f[2]||0; if(g>gPk)gPk=g; gSum+=g; gN++; }
   DB.res.push({ts:p.ts,ex:exName,auto:S.pendAuto,truth:n,corrected:corrected,
     conf:+p.conf.toFixed(2),dur:Math.round(p.dur),hz:Math.round(S.hzDisp),
+    started:p.started||'manual',
     gyroPeak:gPk,gyroMean:gN?Math.round(gSum/gN):0,
     params:Object.assign({},ex.params),raw:trace});
   while(DB.res.length>80) DB.res.shift();
@@ -1381,7 +1390,7 @@ function ui(){
       el.classList.toggle('off', g==='x'); el.classList.toggle('stop', g==='a'||g==='l');
       el.innerHTML =
         g==='x' ? 'CONNECT A SENSOR<span>tap Connect below, or try the demo</span>' :
-        g==='r' ? 'STICK IT ON THE WEIGHT<span>then press here, or click the sensor button</span>' :
+        g==='r' ? 'STICK IT ON THE WEIGHT<span>then just start lifting, I will catch up</span>' :
         g==='a' ? 'GET SET…<span>hold still — starts when the weight settles</span>' :
                   'FINISH SET<span>1 click · 2 clicks to cancel</span>'; }
     const last=S.setReps[S.setReps.length-1];
@@ -1556,7 +1565,8 @@ function anonWorkout(w){
   // research rows that belong to this workout window
   const res=(DB.res||[]).filter(r=>r.ts>=t0-6e5&&r.ts<=end+6e5).map(r=>({
     ex:r.ex, auto:r.auto, truth:r.truth, corrected:!!r.corrected, conf:r.conf,
-    dur:r.dur, hz:r.hz, gyroPeak:r.gyroPeak??null, gyroMean:r.gyroMean??null,
+    dur:r.dur, hz:r.hz, started:r.started||null,
+    gyroPeak:r.gyroPeak??null, gyroMean:r.gyroMean??null,
     params:r.params, t:Math.max(0,Math.round((r.ts-t0)/1000)), raw:r.raw
   }));
   // exercise models only — no lastW, no personal records
