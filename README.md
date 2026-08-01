@@ -261,9 +261,24 @@ wrangler secret put CHAT_ID    -c worker/wrangler.toml   # your numeric chat id
 wrangler secret put UPLOAD_KEY -c worker/wrangler.toml   # optional, adds ?k=...
 ```
 
-**On your own domain.** If the zone is in the same Cloudflare account, set a
-subdomain in [`worker/wrangler.toml`](worker/wrangler.toml) and Wrangler
-creates the DNS record and certificate for you:
+**No Node installed?** Skip Wrangler entirely and use the Cloudflare
+dashboard — the whole thing is copy-paste:
+
+1. **Workers & Pages → Create → Start with Hello World → Deploy.**
+   Name it `ironcap-upload`.
+2. **Edit code**, select everything in the editor, paste
+   [`worker/ironcap-upload.js`](worker/ironcap-upload.js), **Deploy**.
+3. **Settings → Variables and Secrets → Add**, type **Secret**:
+   `BOT_TOKEN` (from @BotFather) and `CHAT_ID` (your numeric chat id).
+   Deploy again so the secrets take effect.
+4. **Settings → Domains & Routes → Add → Custom domain**, enter
+   `ironcap.yourdomain.com`. Cloudflare adds the DNS record and certificate.
+5. Paste `https://ironcap.yourdomain.com/upload` into the app and press
+   **Test**.
+
+**With Wrangler, on your own domain.** If the zone is in the same Cloudflare
+account, set the subdomain in [`worker/wrangler.toml`](worker/wrangler.toml)
+and Wrangler creates the DNS record and certificate for you:
 
 ```toml
 routes = [{ pattern = "ironcap.example.com", custom_domain = true }]
