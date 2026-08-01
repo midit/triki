@@ -1,0 +1,28 @@
+# IronCap collector — Cloudflare Worker config.
+#
+# Deploy from the repo root:
+#   wrangler deploy -c worker/wrangler.toml
+#
+# Secrets are NOT stored here. Set them once after the first deploy:
+#   wrangler secret put BOT_TOKEN  -c worker/wrangler.toml
+#   wrangler secret put CHAT_ID    -c worker/wrangler.toml
+#   wrangler secret put UPLOAD_KEY -c worker/wrangler.toml   # optional
+
+name = "ironcap-upload"
+main = "ironcap-upload.js"
+compatibility_date = "2026-01-01"
+
+# ── Your own domain ───────────────────────────────────────────────────────
+# Replace with a subdomain of a zone that lives in this Cloudflare account.
+# Wrangler creates the DNS record and the certificate for you; nothing to add
+# by hand. Then the collector URL is https://ironcap.example.com/upload
+#
+# Comment this block out to deploy on the free
+# https://ironcap-upload.<your-subdomain>.workers.dev instead.
+routes = [
+  { pattern = "ironcap.example.com", custom_domain = true }
+]
+
+# Uploads are a few hundred KB of JSON; the defaults are plenty.
+[observability]
+enabled = true

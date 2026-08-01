@@ -8,13 +8,16 @@
  * credential — the worst it permits is someone posting junk to your own chat,
  * which you fix by rotating the URL.
  *
- * Deploy (about five minutes, free tier):
+ * Deploy (about five minutes, free tier) — see worker/wrangler.toml:
  *   1. npm i -g wrangler && wrangler login
- *   2. wrangler deploy worker/ironcap-upload.js --name ironcap-upload
- *   3. wrangler secret put BOT_TOKEN     # from @BotFather
- *      wrangler secret put CHAT_ID       # your numeric chat id
- *      wrangler secret put UPLOAD_KEY    # optional: adds ?k=... to the URL
- *   4. Paste https://ironcap-upload.<you>.workers.dev/upload into the app.
+ *   2. wrangler deploy -c worker/wrangler.toml
+ *   3. wrangler secret put BOT_TOKEN  -c worker/wrangler.toml   # from @BotFather
+ *      wrangler secret put CHAT_ID    -c worker/wrangler.toml   # numeric chat id
+ *      wrangler secret put UPLOAD_KEY -c worker/wrangler.toml   # optional ?k=...
+ *   4. Paste the resulting URL into the app's Settings.
+ *
+ * wrangler.toml can bind this to a subdomain of your own zone, in which case
+ * Cloudflare creates the DNS record and certificate itself.
  *
  * The app posts text/plain on purpose, so this stays a "simple" CORS request
  * and no preflight is involved. OPTIONS is still handled for good measure.

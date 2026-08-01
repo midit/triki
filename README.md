@@ -255,15 +255,25 @@ file:
 
 ```bash
 npm i -g wrangler && wrangler login
-wrangler deploy worker/ironcap-upload.js --name ironcap-upload
-wrangler secret put BOT_TOKEN     # from @BotFather
-wrangler secret put CHAT_ID       # your numeric chat id
-wrangler secret put UPLOAD_KEY    # optional, adds ?k=... to the URL
+wrangler deploy      -c worker/wrangler.toml
+wrangler secret put BOT_TOKEN  -c worker/wrangler.toml   # from @BotFather
+wrangler secret put CHAT_ID    -c worker/wrangler.toml   # your numeric chat id
+wrangler secret put UPLOAD_KEY -c worker/wrangler.toml   # optional, adds ?k=...
 ```
 
-Then paste `https://ironcap-upload.<you>.workers.dev/upload` into every
-tester's phone once. Any endpoint works — the app POSTs `text/plain` so the
-request stays "simple" and no CORS preflight is involved.
+**On your own domain.** If the zone is in the same Cloudflare account, set a
+subdomain in [`worker/wrangler.toml`](worker/wrangler.toml) and Wrangler
+creates the DNS record and certificate for you:
+
+```toml
+routes = [{ pattern = "ironcap.example.com", custom_domain = true }]
+```
+
+The collector URL is then `https://ironcap.example.com/upload`. Comment the
+block out to stay on the free `*.workers.dev` address instead. Either way you
+paste that one URL into each tester's phone once. Any endpoint works — the app
+POSTs `text/plain`, so the request stays "simple" and no CORS preflight is
+involved.
 
 > An earlier version called the Telegram Bot API straight from the page. That
 > worked, but a bot token had to be typed into each tester's phone, which is
@@ -370,7 +380,7 @@ ironcap.html               the gym app (self-contained, no dependencies)
 index.html                 cycling cadence app
 manifest.webmanifest       PWA manifest
 sw.js                      service worker, offline shell
-worker/ironcap-upload.js   optional Cloudflare Worker that collects uploads
+worker/                    optional Cloudflare Worker that collects uploads
 sdk/ironcap.mjs            analytics SDK + reference detector (browser & Node)
 test/                      unit tests (node --test)
 .github/workflows/ci.yml   test + deploy pipeline
