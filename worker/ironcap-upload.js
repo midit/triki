@@ -32,8 +32,30 @@ const CORS = {
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
+
+    // Self-check: says whether the secrets exist, never what they are.
+    if (new URL(request.url).pathname === '/health') {
+      return new Response(JSON.stringify({
+        ok: true,
+        BOT_TOKEN: env.BOT_TOKEN ? 'set' : 'MISSING',
+        CHAT_ID: env.CHAT_ID ? 'set' : 'MISSING',
+        UPLOAD_KEY: env.UPLOAD_KEY ? 'set' : 'not set (fine)',
+      }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+
     if (request.method !== 'POST') {
-      return new Response('IronCap collector. POST a workout here.', { headers: CORS });
+      return new Response('IronCap collector. POST a workout here. Try /health.', { headers: CORS });
+    }
+
+    if (!env.BOT_TOKEN || !env.CHAT_ID) {
+      return new Response(JSON.stringify({
+        ok: false,
+        description: 'collector is missing ' +
+          (!env.BOT_TOKEN ? 'BOT_TOKEN' : '') +
+          (!env.BOT_TOKEN && !env.CHAT_ID ? ' and ' : '') +
+          (!env.CHAT_ID ? 'CHAT_ID' : '') +
+          ' — add it under Settings > Variables and Secrets, then Deploy again',
+      }), { status: 502, headers: { ...CORS, 'Content-Type': 'application/json' } });
     }
 
     // Optional shared key, so a leaked URL alone is not enough to post.

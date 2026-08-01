@@ -1560,7 +1560,15 @@ async function postUpload(name,text,caption){
     body:JSON.stringify({app:'IronCap',name:name,caption:caption||'',
       participant:CFG.pid,payload:JSON.parse(text)})
   });
-  if(!r.ok) throw new Error('HTTP '+r.status);
+  if(!r.ok){
+    // The collector reports why Telegram refused; surfacing "chat not found"
+    // beats "HTTP 502", which tells the user nothing actionable.
+    let why='';
+    try{ const b=await r.json();
+      why=b.description||b.error||(b.result&&b.result.description)||''; }
+    catch(e){ try{ why=(await r.text()).slice(0,120); }catch(_){} }
+    throw new Error(why?('HTTP '+r.status+' — '+why):('HTTP '+r.status));
+  }
   return true;
 }
 

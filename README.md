@@ -261,6 +261,18 @@ wrangler secret put CHAT_ID    -c worker/wrangler.toml   # your numeric chat id
 wrangler secret put UPLOAD_KEY -c worker/wrangler.toml   # optional, adds ?k=...
 ```
 
+**Check it works:** open `https://collect.yourdomain.com/health` in a browser.
+It reports whether each secret is present — never their values:
+
+```json
+{ "ok": true, "BOT_TOKEN": "set", "CHAT_ID": "MISSING", "UPLOAD_KEY": "not set (fine)" }
+```
+
+A `502` from the app's Test button means the collector ran but Telegram refused;
+the app shows the reason, e.g. *chat not found* (message your bot once so it is
+allowed to reply to you) or *Unauthorized* (wrong `BOT_TOKEN`). Secrets only
+take effect after a redeploy.
+
 **No Node installed?** Skip Wrangler entirely and use the Cloudflare
 dashboard — the whole thing is copy-paste:
 
