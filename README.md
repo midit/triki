@@ -295,6 +295,24 @@ involved.
 > both awkward to set up and a secret living in someone else's browser. The
 > URL indirection removes it.
 
+### Junk filtering
+
+Not every saved set is training. Auto-start can open one while the sensor is
+being handled, and testing the app produces sets that look like data.
+
+The rule is **flag, don't delete**. A set the counter got badly wrong is the
+most valuable set in the dataset, so it is kept and marked rather than
+discarded. Each set carries `flags` when something looks off — `tooShort`,
+`fewReps`, `manyReps`, `tempoFast`, `tempoSlow`, `noTrace`, `bigCorrection` —
+and analysis can filter on them afterwards.
+
+Only one case is dropped outright: a "workout" that is a single stray set,
+which is never real training.
+
+Workouts also close themselves. If an hour passes with no new set, the session
+is finished and uploaded on the next app open — otherwise a tester who just
+walks out of the gym never sends anything.
+
 ### What is actually sent
 
 Both routes send the same document, built by **allow-list** so a field added

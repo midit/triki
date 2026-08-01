@@ -1168,13 +1168,29 @@ function button(b,t){
     else cancelSet();
   }
 }
-function endWorkout(){
+/* Finish a workout that was clearly abandoned. Friends close the app and
+   walk out; without this their session — and its data — never leaves the
+   phone. An hour with no new set is well past any real rest interval. */
+const STALE_MIN=60;
+function lastSetAt(w){
+  const s=(w&&w.sets)||[];
+  return s.length?Math.max.apply(null,s.map(x=>x.ts||w.start)):(w?w.start:0);
+}
+function finishStaleWorkout(){
+  if(!DB.cur||!DB.cur.sets.length||S.live) return false;
+  if(Date.now()-lastSetAt(DB.cur)<STALE_MIN*60000) return false;
+  const n=DB.cur.sets.length;
+  endWorkout(true);
+  toast('Closed an unfinished workout ('+n+' sets)');
+  return true;
+}
+function endWorkout(auto){
   if(S.live) endSet(false);
-  if(!DB.cur||!DB.cur.sets.length){ toast('Nothing to save yet'); return; }
+  if(!DB.cur||!DB.cur.sets.length){ if(!auto) toast('Nothing to save yet'); return; }
   DB.cur.end=Date.now(); DB.wk.unshift(DB.cur); while(DB.wk.length>60) DB.wk.pop();
   const done=DB.wk[0], n=DB.cur.sets.length; DB.cur=null; saveDB(); renderWk(); renderHist();
   apiEmit('workout',JSON.parse(JSON.stringify(done)));
-  toast('Workout saved: '+n+' sets'); say('Workout saved',true);
+  if(!auto){ toast('Workout saved: '+n+' sets'); say('Workout saved',true); }
   sendWorkout(done);                       // coach sync, if configured
   updateSyncChip();
 }
@@ -1600,6 +1616,46 @@ function workoutCaption(w){
     +names.join(', ');
 }
 
+/* ══ QUALITY FLAGS ═════════════════════════════════════════════════════
+   Not every saved set is real training. Auto-start can open one while the
+   sensor is being fiddled with, and testing the app at home produces sets
+   that look like data but are not.
+
+   The rule here is FLAG, DON'T DELETE. A set the counter got badly wrong is
+   the most valuable set in the dataset — silently dropping it would remove
+   exactly what the algorithm needs. Only the clearly worthless case (a
+   session that is one stray set) is skipped outright.                    */
+function setFlags(set,res){
+  const f=[];
+  const reps=set?set.reps:(res?res.truth:0);
+  const dur=(set&&set.dur)||(res&&res.dur)||0;
+  if(dur<8) f.push('tooShort');
+  if(reps<3) f.push('fewReps');
+  if(reps>50) f.push('manyReps');
+  if(dur>0&&reps>0){
+    const per=dur/reps;
+    if(per<0.8) f.push('tempoFast');
+    if(per>9) f.push('tempoSlow');
+  }
+  if(res){
+    if(!res.raw) f.push('noTrace');
+    // a correction this large usually means a mis-tap, not a counter failure
+    if(Number.isFinite(res.auto)&&Number.isFinite(res.truth)){
+      const d=Math.abs(res.auto-res.truth);
+      if(d>Math.max(5,res.truth*0.6)) f.push('bigCorrection');
+    }
+  }
+  return f;
+}
+/* A workout worth uploading: more than one set, or one substantial set. */
+function workoutWorthSending(w){
+  const sets=w.sets||[];
+  if(!sets.length) return false;
+  const reps=sets.reduce((a,x)=>a+x.reps,0);
+  const good=sets.filter(x=>!setFlags(x,null).length).length;
+  return sets.length>=2 || (good>=1 && reps>=6);
+}
+
 /* ══ ANONYMISED PAYLOAD ════════════════════════════════════════════════
    Built by allow-list, not by deleting fields from a bigger object — that
    way a new field added elsewhere can never leak by accident.
@@ -1609,15 +1665,18 @@ function workoutCaption(w){
    the workout, plus the calendar date) or personal-best records.        */
 function anonWorkout(w){
   const t0=w.start, end=w.end||t0;
-  const sets=w.sets.map(s=>({
-    ex:s.ex, reps:s.reps, w:s.w||0, dur:s.dur, corrected:!!s.man, ecc:s.ecc||0,
-    p:s.p||CFG.pid,                      // anonymous id only — never the label
-    t:Math.max(0,Math.round(((s.ts||t0)-t0)/1000))
-  }));
+  const sets=w.sets.map(s=>{
+    const fl=setFlags(s,null);
+    const o={ex:s.ex, reps:s.reps, w:s.w||0, dur:s.dur, corrected:!!s.man, ecc:s.ecc||0,
+      p:s.p||CFG.pid,                    // anonymous id only — never the label
+      t:Math.max(0,Math.round(((s.ts||t0)-t0)/1000))};
+    if(fl.length) o.flags=fl;
+    return o;
+  });
   // research rows that belong to this workout window
   const res=(DB.res||[]).filter(r=>r.ts>=t0-6e5&&r.ts<=end+6e5).map(r=>({
     ex:r.ex, auto:r.auto, truth:r.truth, corrected:!!r.corrected, conf:r.conf,
-    dur:r.dur, hz:r.hz, started:r.started||null,
+    dur:r.dur, hz:r.hz, started:r.started||null, flags:setFlags(null,r),
     gyroPeak:r.gyroPeak??null, gyroMean:r.gyroMean??null,
     params:r.params, t:Math.max(0,Math.round((r.ts-t0)/1000)), raw:r.raw
   }));
@@ -1636,6 +1695,7 @@ function anonWorkout(w){
 }
 function sendWorkout(w){
   if(!syncOn()) return;
+  if(!workoutWorthSending(w)){ console.info('[ironcap] workout looks like a stray set, not uploading'); return; }
   const doc=anonWorkout(w);
   const name='ironcap_'+CFG.pid+'_'+doc.date+'.json';
   queueUpload(name,JSON.stringify(doc),workoutCaption(w),
@@ -1792,7 +1852,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 document.addEventListener('touchstart',audioResume,{passive:true});
 document.addEventListener('click',audioResume);
 S.det=makeDetector(DEF);
-if(DB.cur&&DB.cur.sets&&DB.cur.sets.length) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
+// A session left open from last time: close it if it is clearly over,
+// otherwise carry on where it stopped.
+if(DB.cur&&DB.cur.sets&&DB.cur.sets.length){
+  if(!finishStaleWorkout()) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
+}
+setInterval(()=>{ finishStaleWorkout(); flushOutbox(); }, 5*60000);
 setMode(0); renderWk(); renderHist(); renderCrew(); ui();
 updateSyncChip();
 if((DB.outbox||[]).length){                       // retry whatever the gym wifi ate
