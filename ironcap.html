@@ -65,6 +65,12 @@ canvas.chart{width:100%;height:110px;display:block;background:#0b1017;border-rad
 .pill{background:#0c1119;border:1px solid #1a2230;border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:700}
 .pill.man{border-color:#2c4a6e;color:#8ec5ff}
 .pill.pr{border-color:#5a4a1a;background:#1a1508;color:#ffd98a}
+.crew{display:flex;gap:6px;margin-bottom:10px}
+.crew .who{flex:1;background:#12171f;border:1px solid #1e2734;border-radius:12px;
+  padding:9px 6px;text-align:center;font-size:13px;font-weight:700;color:#7b8ba3;transition:.15s}
+.crew .who small{display:block;font-size:10.5px;font-weight:600;opacity:.7;margin-top:2px}
+.crew .who.act{color:#04210f;background:linear-gradient(160deg,#2fd07a,#12a35a);border-color:transparent}
+.crew .who.act small{opacity:.8}
 
 .dock{position:fixed;left:0;right:0;bottom:0;background:rgba(10,13,18,.94);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #1a2230;
@@ -173,6 +179,8 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <!-- ============ WORKOUT ============ -->
   <section id="p0">
     <div class="golive" id="goLive">START SET<span>or click the button on the cap</span></div>
+
+    <div class="crew hide" id="crewBar"></div>
 
     <div class="card">
       <div class="hd">Current set <span class="sp"></span><span id="l_ex">—</span></div>
@@ -301,6 +309,13 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <div class="row"><label>Auto-stop set after, s<small>stillness longer than this ends the set</small></label>
     <input type="number" id="oIdle" value="20" min="4" max="90" step="1"></div>
   <div class="row"><label>Battery saver<small>halves the sensor rate to 52 Hz — longer battery, but may miss fast reps. Reconnect to apply</small></label><div class="sw" id="oLow"></div></div>
+  <div class="row" style="border-top:1px solid #17202c;padding-top:14px">
+    <label>Training partners<small>Share one sensor and take turns. The turn passes automatically after each set; records and weights stay separate per person. Names stay on this phone — uploads carry only the anonymous id.</small></label></div>
+  <div id="crewList"></div>
+  <div class="row" style="border:0">
+    <input type="text" id="crewNew" placeholder="partner's name" style="flex:1">
+    <span class="btn" id="crewAdd" style="width:96px">Add</span></div>
+
   <div class="row" style="border-top:1px solid #17202c;padding-top:14px">
     <label>Coach sync<small>After you finish a workout, the session data is sent to a Telegram chat. Leave the fields empty to keep everything on this phone.</small></label></div>
   <div class="row"><label>Anonymous id<small>groups your sets together without naming you. No name, no device id, no clock times are ever sent.</small></label>
@@ -448,6 +463,12 @@ const saveCfg=()=>{try{localStorage.setItem('ironcap.cfg4',JSON.stringify(CFG));
 // anywhere else, and the user can reroll it.
 function newPid(){ return 'p_'+Math.random().toString(36).slice(2,8); }
 if(!CFG.pid){ CFG.pid=newPid(); saveCfg(); }
+/* Crew: several people sharing one sensor, taking turns. Labels are local
+   convenience only — uploads carry the anonymous id, never the label. */
+if(!CFG.crew||!CFG.crew.length){ CFG.crew=[{id:CFG.pid,label:'Me'}]; saveCfg(); }
+function crewOn(){ return CFG.crew.length>1; }
+function activeLifter(){ return CFG.crew[S.lifter] || CFG.crew[0]; }
+function nextLifter(){ if(crewOn()){ S.lifter=(S.lifter+1)%CFG.crew.length; renderCrew(); } }
 
 /* ══ PERSISTENT STORE ══
    ex   : exercise library (detector params + labelled traces)
@@ -543,7 +564,7 @@ const S={
   tLast:0, hzDisp:0, hzWin:[], pkTotal:0, pkFrames:0, lastFrame:0,
   grav:[0,0,0], gInit:false, gn:ACC_LSB, gyBias:[0,0,0], gyRate:0,
   aV:0, motion:0, motionEma:0, stillT:0, capAxis:2, capSign:1,
-  det:null, live:false, arming:false, setT0:0, setRec:[], setReps:[], lastMove:0,
+  det:null, live:false, arming:false, setT0:0, setRec:[], setReps:[], lastMove:0, lifter:0,
   pre:[], preT:0, preReps:[], autoStarted:false,
   log:[], running:false,
   btn:0, btnDown:0, btnUp:0, btnN:0, btnLong:false, btnJolt:0,
@@ -881,9 +902,11 @@ function openPost(){
   prefillWeight();
   $('post').classList.add('on');
 }
-function prefillWeight(){                       // last weight used for this exercise
+function prefillWeight(){       // last weight THIS lifter used for this exercise
   const ex=S.pendEx&&DB.ex[S.pendEx];
-  $('wg_v').value=(ex&&ex.lastW)?ex.lastW:'';
+  const pid=activeLifter().id;
+  const w=ex&&ex.lastWBy&&ex.lastWBy[pid];
+  $('wg_v').value=w||'';
 }
 
 /* ══ EXERCISE RECOGNITION ══════════════════════════════════════════════
@@ -939,18 +962,27 @@ function commitSet(exName,n,corrected){
   const eccs=p.reps.map(r=>r.ecc).filter(x=>x>0);
   const w=parseFloat($('wg_v').value);
   const weight=(!isNaN(w)&&w>0)?w:0;
-  if(weight) ex.lastW=weight;                   // remember for next set's prefill
+  // Records and last-used weight are PER PERSON — with a shared sensor a
+  // partner's heavier set must not wipe your PR or prefill your weight.
+  const pid=activeLifter().id;
+  ex.lastWBy=ex.lastWBy||{};
+  if(weight) ex.lastWBy[pid]=weight;
 
   // Personal records (Hevy-style medals). e1RM = Epley estimate.
   const e1=weight>0?+(weight*(1+n/30)).toFixed(1):0, vol=weight*n;
-  ex.pr=ex.pr||{e1rm:0,vol:0,reps:0};
+  ex.prBy=ex.prBy||{};
+  const pr=ex.prBy[pid]=ex.prBy[pid]||{e1rm:0,vol:0,reps:0};
+  const fresh=!ex.prBy[pid].seen;               // first set this person does
+  pr.seen=true;
   const badges=[];
-  if(weight>0 && e1>ex.pr.e1rm+0.05){ ex.pr.e1rm=e1; if(!firstEver)badges.push('1RM'); }
-  if(weight>0 && vol>ex.pr.vol){ ex.pr.vol=vol; if(!firstEver)badges.push('Volume'); }
-  if(n>ex.pr.reps){ ex.pr.reps=n; if(!firstEver&&weight>0)badges.push('Reps'); }
-  if(firstEver){ ex.pr.e1rm=e1; ex.pr.vol=vol; ex.pr.reps=n; }
+  if(weight>0 && e1>pr.e1rm+0.05){ pr.e1rm=e1; if(!fresh)badges.push('1RM'); }
+  if(weight>0 && vol>pr.vol){ pr.vol=vol; if(!fresh)badges.push('Volume'); }
+  if(n>pr.reps){ pr.reps=n; if(!fresh&&weight>0)badges.push('Reps'); }
+  if(fresh){ pr.e1rm=e1; pr.vol=vol; pr.reps=n; }
 
+  const who=activeLifter();
   DB.cur.sets.push({ex:exName,reps:n,w:weight,e1:e1,pr:badges,dur:Math.round(p.dur),ts:p.ts,man:corrected,
+    p:who.id,pl:who.label,
     ecc:eccs.length?+(eccs.reduce((a,b)=>a+b,0)/eccs.length).toFixed(1):0});
   if(badges.length){ setTimeout(()=>{ beep(1318,.1);setTimeout(()=>beep(1760,.16),110);
     say('New record',true); },260); }
@@ -983,10 +1015,12 @@ function commitSet(exName,n,corrected){
   const prTxt=badges.length?' 🏆 '+badges.join(' + ')+' PR!':'';
   apiEmit('set',{exercise:exName,reps:n,weight:weight,e1RM:e1,records:badges,ts:p.ts});
   S.pendEx=exName; S.pend=null;
-  saveDB(); renderWk(); renderHist();
+  saveDB(); nextLifter(); renderWk(); renderHist(); renderCrew();
   $('post').classList.remove('on');
   toast(exName+': '+n+' reps'+(weight?' · '+weight+'kg':'')+prTxt);
   if(msg) setTimeout(()=>toast(msg),2400);
+  if(crewOn()) setTimeout(()=>{ const w=activeLifter();
+    toast(w.label+"'s turn"); say(w.label+' is up',true); },1200);
   startRest();
 }
 /* ══ LEARNING FROM CORRECTIONS ══
@@ -1160,7 +1194,8 @@ function renderHist(){
   const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
   $('h_ex').innerHTML=names.length?names.map(n=>{
     const e=DB.ex[n], trained=(e.labels||0)>0;
-    const pr=e.pr&&e.pr.e1rm?('best '+e.pr.e1rm+'kg 1RM'):(e.pr&&e.pr.reps?('best '+e.pr.reps+' reps'):'');
+    const mine=(e.prBy||{})[activeLifter().id]||{};
+    const pr=mine.e1rm?('best '+mine.e1rm+'kg 1RM'):(mine.reps?('best '+mine.reps+' reps'):'');
     return '<div class="ex"><div class="nm">'+esc(n)
       +'<small>'+(e.used||0)+' sets'+(pr?' · '+pr:'')+' · '
       +(trained?('trained on '+e.labels+' correction'+(e.labels===1?'':'s')):'not corrected yet')
@@ -1186,6 +1221,25 @@ function renderHist(){
   }).join(''):'<div class="hint">No finished workouts yet. Hold the cap button to finish one.</div>';
 }
 function fmtKg(v){ return Math.round(v).toLocaleString('en-US'); }   // 1485 -> "1,485"
+
+/* ══ CREW MODE ═════════════════════════════════════════════════════════
+   One sensor, several people taking turns. Whoever is up is tagged on the
+   set, records and weights stay separate per person, and the turn passes
+   automatically once a set is saved — which is exactly how alternating
+   sets already work in a gym.                                           */
+function renderCrew(){
+  const bar=$('crewBar'); if(!bar) return;
+  bar.classList.toggle('hide',!crewOn());
+  if(!crewOn()) return;
+  const sets=(DB.cur&&DB.cur.sets)||[];
+  bar.innerHTML=CFG.crew.map((c,i)=>{
+    const mine=sets.filter(x=>x.p===c.id);
+    const reps=mine.reduce((a,x)=>a+x.reps,0);
+    const vol=mine.reduce((a,x)=>a+(x.w||0)*x.reps,0);
+    return '<div class="who'+(i===S.lifter?' act':'')+'" data-i="'+i+'">'+esc(c.label)
+      +'<small>'+mine.length+' sets · '+reps+' reps'+(vol?' · '+fmtKg(vol)+'kg':'')+'</small></div>';
+  }).join('');
+}
 
 /* ══ SHAREABLE WORKOUT CARD ═══════════════════════════════════════════
    Renders the workout to a canvas and hands it to the system share sheet
@@ -1496,6 +1550,7 @@ function anonWorkout(w){
   const t0=w.start, end=w.end||t0;
   const sets=w.sets.map(s=>({
     ex:s.ex, reps:s.reps, w:s.w||0, dur:s.dur, corrected:!!s.man, ecc:s.ecc||0,
+    p:s.p||CFG.pid,                      // anonymous id only — never the label
     t:Math.max(0,Math.round(((s.ts||t0)-t0)/1000))
   }));
   // research rows that belong to this workout window
@@ -1508,9 +1563,10 @@ function anonWorkout(w){
   const ex={};
   for(const k in DB.ex){ const e=DB.ex[k];
     ex[k]={params:e.params, per:e.per, used:e.used, labels:e.labels,
-           sig:e.sig||null, sigN:e.sigN||0}; }
+           sig:e.sig||null, sigN:e.sigN||0}; }   // no prBy / lastWBy
   return {app:'IronCap', version:APP_VERSION, build:BUILD.shortCommit||'dev',
     participant:CFG.pid,
+    participants:[...new Set(w.sets.map(x=>x.p||CFG.pid))],
     date:new Date(t0).toISOString().slice(0,10),
     durationSec:Math.round((end-t0)/1000),
     note:'times are seconds from workout start; raw = [[dt_ms, vertical_accel_g, rotation_dps], ...]',
@@ -1568,6 +1624,11 @@ $('bCsv').onclick=exportCsv;
 $('bResearch').onclick=exportResearch;
 $('bDemo').onclick=()=>demo(!demoT);
 $('bEndWk').onclick=()=>{$('cfg').classList.remove('on');endWorkout();};
+$('crewBar').addEventListener('click',e=>{
+  const w=e.target.closest('.who'); if(!w) return;
+  S.lifter=+w.dataset.i; renderCrew(); prefillWeight();
+  toast(activeLifter().label+' is up');
+});
 $('h_wk').addEventListener('click',e=>{
   const b=e.target.closest('.shareBtn'); if(!b) return;
   const w=DB.wk[+b.dataset.i]; if(w) shareCard(w);
@@ -1606,6 +1667,29 @@ function txt(id,key,after){const e=$(id); e.value=CFG[key]||'';
   e.onchange=()=>{CFG[key]=e.value.trim();saveCfg();after&&after();};}
 txt('tgTok','tgToken',updateSyncChip); txt('tgChat','tgChat',updateSyncChip);
 $('tgPid').textContent=CFG.pid;
+function renderCrewList(){
+  $('crewList').innerHTML=CFG.crew.map((c,i)=>
+    '<div class="row"><label>'+esc(c.label)
+    +'<small class="mono">'+esc(c.id)+(i===0?' · you':'')+'</small></label>'
+    +(i===0?'':'<span class="btn gh crewDel" data-i="'+i+'" style="padding:8px 12px;font-size:12px">Remove</span>')
+    +'</div>').join('');
+}
+renderCrewList();
+$('crewAdd').onclick=()=>{
+  const nm=($('crewNew').value||'').trim();
+  if(!nm){ toast('Type a name first'); return; }
+  if(CFG.crew.length>=6){ toast('Six is plenty'); return; }
+  CFG.crew.push({id:newPid(),label:nm}); saveCfg();
+  $('crewNew').value=''; renderCrewList(); renderCrew();
+  toast(nm+' added — turns will alternate');
+};
+$('crewList').addEventListener('click',e=>{
+  const b=e.target.closest('.crewDel'); if(!b) return;
+  const i=+b.dataset.i, gone=CFG.crew[i];
+  if(!confirm('Remove '+gone.label+'? Sets already saved keep their id.')) return;
+  CFG.crew.splice(i,1); if(S.lifter>=CFG.crew.length) S.lifter=0;
+  saveCfg(); renderCrewList(); renderCrew();
+});
 $('tgReroll').onclick=()=>{ if(!confirm('Start a new anonymous id? Past uploads keep the old one.'))return;
   CFG.pid=newPid(); saveCfg(); $('tgPid').textContent=CFG.pid; toast('New id: '+CFG.pid); };
 $('tgPreview').onclick=()=>{
@@ -1641,7 +1725,7 @@ document.addEventListener('touchstart',audioResume,{passive:true});
 document.addEventListener('click',audioResume);
 S.det=makeDetector(DEF);
 if(DB.cur&&DB.cur.sets&&DB.cur.sets.length) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
-setMode(0); renderWk(); renderHist(); ui();
+setMode(0); renderWk(); renderHist(); renderCrew(); ui();
 updateSyncChip();
 if((DB.outbox||[]).length){                       // retry whatever the gym wifi ate
   $('tgState').textContent=DB.outbox.length+' upload(s) waiting to be sent';

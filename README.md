@@ -222,6 +222,18 @@ IronCap.countTrace(rawTrace).count;  // replay the detector on a raw signal
 IronCap.recount(researchSet, { sens: 1.1 });   // re-count with different params
 ```
 
+## Training partners — one sensor, several people
+
+Add partners in Settings and the app takes turns for you: whoever is up is
+tagged on the set, the turn passes automatically once a set is saved, and a bar
+at the top shows each person's sets, reps and volume for the session — which is
+the whole point when two people alternate on the same bar.
+
+Records and last-used weights are kept **per person**, so a partner's heavier
+set never wipes your PR or prefills your weight. Names stay on the phone;
+uploads carry only each person's anonymous id, and a session with two lifters
+arrives as one file with the sets tagged individually.
+
 ## Coach sync — datasets over Telegram, no server
 
 Finish a workout and its dataset is posted straight to a Telegram chat. There is
