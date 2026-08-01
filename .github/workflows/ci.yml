@@ -53,6 +53,17 @@ jobs:
           cp ironcap.html index.html manifest.webmanifest sw.js README.md _site/
           cp sdk/ironcap.mjs _site/sdk/
           touch _site/.nojekyll
+          # Serve on a custom domain only once the repo variable PAGES_DOMAIN is
+          # set. Writing a CNAME before DNS resolves would take the site offline,
+          # so this stays inert until you opt in.
+          if [ -n "${PAGES_DOMAIN}" ]; then
+            echo "${PAGES_DOMAIN}" > _site/CNAME
+            echo "Serving on custom domain: ${PAGES_DOMAIN}"
+          else
+            echo "No PAGES_DOMAIN set - staying on github.io"
+          fi
+        env:
+          PAGES_DOMAIN: ${{ vars.PAGES_DOMAIN }}
       - name: Write build-info manifest
         run: |
           cat > _site/build-info.json <<JSON

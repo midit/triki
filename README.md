@@ -359,6 +359,35 @@ Request types: `snapshot`, `workouts`, `exercises`, `version`.
 }
 ```
 
+## Putting it on your own domain
+
+One hostname serves one origin, so the app and the collector need **different**
+subdomains — the app is on GitHub Pages, the collector is a Cloudflare Worker.
+Give the memorable one to the app, since that is the link testers open:
+
+| Host | Serves |
+|---|---|
+| `ironcap.yourdomain.com` | the app (GitHub Pages) |
+| `collect.yourdomain.com` | the collector (Cloudflare Worker) |
+
+**App on GitHub Pages, DNS on Cloudflare:**
+
+1. Cloudflare DNS → add `CNAME` `ironcap` → `<user>.github.io`, and set it to
+   **DNS only** (grey cloud). Proxying it before GitHub issues its certificate
+   causes a redirect loop.
+2. Repo → **Settings → Pages → Custom domain** → `ironcap.yourdomain.com`,
+   then wait for the certificate and tick **Enforce HTTPS**.
+3. Repo → **Settings → Secrets and variables → Actions → Variables** → add
+   `PAGES_DOMAIN` = `ironcap.yourdomain.com`.
+
+The workflow writes a `CNAME` file only when `PAGES_DOMAIN` is set, so nothing
+changes until step 3 — set the DNS up first and the site is never offline.
+
+**Collector on the Worker:** attach `collect.yourdomain.com` to it (dashboard →
+Worker → *Settings → Domains & Routes → Add → Custom domain*, or the `routes`
+block in [`worker/wrangler.toml`](worker/wrangler.toml)), then paste
+`https://collect.yourdomain.com/upload` into the app.
+
 ## DevOps — CI/CD
 
 Everything ships through a [GitHub Actions pipeline](.github/workflows/ci.yml);

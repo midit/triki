@@ -14,13 +14,15 @@ compatibility_date = "2026-01-01"
 
 # ── Your own domain ───────────────────────────────────────────────────────
 # Subdomain of a zone that lives in this Cloudflare account.
+# Keep this DIFFERENT from the hostname serving the app: one hostname
+# can only point at one origin, and the app is on GitHub Pages.
 # Wrangler creates the DNS record and the certificate for you; nothing to add
-# by hand. Then the collector URL is https://ironcap.maksympatrushev.com/upload
+# by hand. Then the collector URL is https://collect.maksympatrushev.com/upload
 #
 # Comment this block out to deploy on the free
 # https://ironcap-upload.<your-subdomain>.workers.dev instead.
 routes = [
-  { pattern = "ironcap.maksympatrushev.com", custom_domain = true }
+  { pattern = "collect.maksympatrushev.com", custom_domain = true }
 ]
 
 # Uploads are a few hundred KB of JSON; the defaults are plenty.
