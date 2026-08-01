@@ -33,14 +33,33 @@ export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
 
-    // Self-check: says whether the secrets exist, never what they are.
+    // Self-check. Reports the NAMES bound to this Worker and whether each has
+    // a usable value — never the values themselves. Listing the real names
+    // catches the cases a "looks correct" glance cannot: a stray space, or a
+    // Cyrillic О/Т/А inside an otherwise Latin name, which renders identically
+    // but is a different key entirely.
     if (new URL(request.url).pathname === '/health') {
+      const names = Object.keys(env).sort();
+      const describe = (k) => {
+        const v = env[k];
+        return {
+          type: typeof v,
+          empty: !v,
+          length: typeof v === 'string' ? v.length : null,
+          asciiName: /^[A-Za-z0-9_]+$/.test(k),
+        };
+      };
+      const detail = {};
+      for (const k of names) detail[k] = describe(k);
       return new Response(JSON.stringify({
         ok: true,
-        BOT_TOKEN: env.BOT_TOKEN ? 'set' : 'MISSING',
-        CHAT_ID: env.CHAT_ID ? 'set' : 'MISSING',
-        UPLOAD_KEY: env.UPLOAD_KEY ? 'set' : 'not set (fine)',
-      }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+        boundNames: names,
+        expected: { BOT_TOKEN: names.includes('BOT_TOKEN'), CHAT_ID: names.includes('CHAT_ID') },
+        detail,
+        hint: names.includes('BOT_TOKEN')
+          ? 'names look right'
+          : 'BOT_TOKEN is not bound under that exact name — compare it against boundNames above',
+      }, null, 1), { headers: { ...CORS, 'Content-Type': 'application/json' } });
     }
 
     if (request.method !== 'POST') {
