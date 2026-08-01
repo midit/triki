@@ -50,7 +50,11 @@ jobs:
       - name: Stage public site
         run: |
           mkdir -p _site/sdk
-          cp ironcap.html index.html manifest.webmanifest sw.js README.md _site/
+          cp ironcap.html manifest.webmanifest sw.js README.md _site/
+          cp cadence.html _site/
+          # The app is the site root. /ironcap.html stays as a copy so links
+          # and already-installed PWAs keep working.
+          cp ironcap.html _site/index.html
           cp sdk/ironcap.mjs _site/sdk/
           touch _site/.nojekyll
           # Serve on a custom domain only once the repo variable PAGES_DOMAIN is

@@ -2,7 +2,7 @@
   "name": "IronCap — Smart Gym Tracker",
   "short_name": "IronCap",
   "description": "Hands-free rep counter for the gym. Works with Nordic UART compatible IMU sensors.",
-  "start_url": "./ironcap.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

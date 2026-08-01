@@ -30,7 +30,7 @@ frames, and you know its scaling factors — see [Frame format](#frame-format--1
 | App | Link | What it does |
 |---|---|---|
 | **IronCap** | [`ironcap.html`](ironcap.html) | Counts reps on any exercise, recognises the exercise, tracks tempo and PRs, learns from your corrections, keeps a workout history |
-| **Cadence** | [`index.html`](index.html) | Earlier experiment: cycling cadence from the same kind of sensor |
+| **Cadence** | [`cadence.html`](cadence.html) | Earlier experiment: cycling cadence from the same kind of sensor |
 
 > Independent open-source project. Not affiliated with, endorsed by, or
 > connected to Żabka, Holyiot, MINEW or Nordic Semiconductor. Device names are
@@ -420,8 +420,8 @@ context: `localhost` and `https` qualify, plain `http` over the LAN does not.
 ## Repository layout
 
 ```
-ironcap.html               the gym app (self-contained, no dependencies)
-index.html                 cycling cadence app
+ironcap.html               the gym app (deployed as the site root too)
+cadence.html               cycling cadence app
 manifest.webmanifest       PWA manifest
 sw.js                      service worker, offline shell
 worker/                    optional Cloudflare Worker that collects uploads
