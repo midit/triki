@@ -487,7 +487,7 @@ let DB={ex:{},wk:[],cur:null,res:[],outbox:[]};
 try{ const d=JSON.parse(localStorage.getItem('ironcap.db')||'null');
      if(d&&d.ex){ DB=Object.assign({ex:{},wk:[],cur:null,res:[],outbox:[]},d); } }catch(e){}
 
-const STORE_BUDGET=3.3*1024*1024;   // stay well under the ~5 MB localStorage cap
+const STORE_BUDGET=4.0*1024*1024;   // stay under the ~5 MB localStorage cap
 const SAMPLE_CAP=24;                // learning traces kept across ALL exercises
 
 function dbBytes(){ try{ return JSON.stringify(DB).length; }catch(e){ return 0; } }
@@ -511,9 +511,20 @@ function pruneStore(){
     if(!big||big.n<=1) break;
     DB.ex[big.k].samples.shift(); freed++;
   }
-  // 3. still too big: shed the oldest remaining traces, keeping the rows
+  // 3. Still too big. Shed only traces that have ALREADY been delivered.
+  //    An undelivered trace is the one piece of data that exists nowhere else,
+  //    so it must not be sacrificed to make room — a real session came back
+  //    with 25 of 27 sets marked noTrace because this step was indiscriminate.
   for(let i=0;i<DB.res.length&&dbBytes()>STORE_BUDGET;i++){
-    if(DB.res[i].raw){ delete DB.res[i].raw; freed++; }
+    if(DB.res[i].raw&&DB.res[i].sent){ delete DB.res[i].raw; freed++; }
+  }
+  // 4. Last resort only: nothing delivered left to drop and still over budget.
+  //    Warn, because this is data loss.
+  if(dbBytes()>STORE_BUDGET){
+    for(let i=0;i<DB.res.length&&dbBytes()>STORE_BUDGET;i++){
+      if(DB.res[i].raw){ delete DB.res[i].raw; freed++; }
+    }
+    toast('Storage full — some traces were dropped before upload');
   }
   return freed;
 }
@@ -834,10 +845,28 @@ function maybeAutoStart(t){
   adoptPreroll(true);
 }
 function adoptPreroll(auto){
-  // Adopt the whole ring buffer: it is only PREROLL_S long, and the
-  // re-count applies the same gating the live counter would have.
+  // Adopt only from shortly before the FIRST rep seen in the buffer — NOT the
+  // whole ring. The buffer holds 60 s so it also contains the previous rest,
+  // walking to the rack and setting up; swallowing all of it stretched a 40 s
+  // set to 100 s and counted the setup movement as reps. Real data showed
+  // exactly that: durations of 78-111 s and accuracy down to 79%.
   S.live=true; S.arming=false;
-  S.setRec=S.pre.slice();
+  let keep=S.pre;
+  if(S.preReps.length){
+    // Use the FRAME clock, not wall time: rep marks come from frame
+    // timestamps, so mixing in now() only works while the two happen to
+    // agree. Anchoring both to S.tLast keeps the arithmetic honest.
+    const tNow=S.tLast||now();
+    const bufStart=tNow-S.preT;                        // frame time of frame 0
+    const want=Math.max(0,(S.preReps[0]-bufStart)-1.5); // 1.5 s of lead-in
+    let acc=0, cut=0;
+    for(let i=0;i<S.pre.length;i++){
+      if(acc>=want){ cut=i; break; }
+      acc+=S.pre[i][0]/1000; cut=i+1;
+    }
+    if(cut<S.pre.length) keep=S.pre.slice(cut);
+  }
+  S.setRec=keep.slice();
   const span=S.setRec.reduce((a,f)=>a+f[0]/1000,0);
   S.setT0=now()-span;                                  // set began that long ago
   const P=currentParams();

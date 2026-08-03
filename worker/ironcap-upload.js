@@ -85,11 +85,34 @@ export default {
       }
     }
 
+    // Only the upload path. Scanners hammer / and random paths.
+    const path = new URL(request.url).pathname;
+    if (path !== '/upload' && path !== '/') {
+      return new Response('not here', { status: 404, headers: CORS });
+    }
+
     let body;
     try {
       body = JSON.parse(await request.text());
     } catch {
       return new Response('bad json', { status: 400, headers: CORS });
+    }
+
+    // Shape check. A public URL gets found within minutes — new certificates
+    // are published to Certificate Transparency logs and crawlers follow them.
+    // Observed in the wild here: GraphQL introspection probes, anti-bot
+    // challenge payloads and bare {}. Anything that is not recognisably an
+    // IronCap upload is dropped before it can reach the chat.
+    const looksLikeIronCap =
+      body && typeof body === 'object' &&
+      body.app === 'IronCap' &&
+      typeof body.participant === 'string' &&
+      /^p_[a-z0-9]{4,12}$/.test(body.participant) &&
+      body.payload && typeof body.payload === 'object' &&
+      (Array.isArray(body.payload.sets) || body.payload.test === true);
+    if (!looksLikeIronCap) {
+      return new Response(JSON.stringify({ ok: false, description: 'not an IronCap upload' }),
+        { status: 400, headers: { ...CORS, 'Content-Type': 'application/json' } });
     }
 
     const name = String(body.name || 'ironcap.json').replace(/[^\w.\-]/g, '_');
