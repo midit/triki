@@ -71,6 +71,17 @@ canvas.chart{width:100%;height:110px;display:block;background:#0b1017;border-rad
 .crew .who small{display:block;font-size:10.5px;font-weight:600;opacity:.7;margin-top:2px}
 .crew .who.act{color:#04210f;background:linear-gradient(160deg,#2fd07a,#12a35a);border-color:transparent}
 .crew .who.act small{opacity:.8}
+.heat{display:flex;gap:3px;overflow-x:auto;padding-bottom:4px}
+.heat .wk{display:flex;flex-direction:column;gap:3px}
+.heat i{width:13px;height:13px;border-radius:3px;background:#141b26;display:block}
+.heat i.l1{background:#1c4a30}.heat i.l2{background:#246b41}
+.heat i.l3{background:#2fa05e}.heat i.l4{background:#2fd07a}
+.heat i.today{outline:1.5px solid #4dabf7;outline-offset:1px}
+.mus{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13px}
+.mus .nm{width:96px;color:#c6d2e2;font-weight:600}
+.mus .track{flex:1;height:9px;background:#0c1119;border-radius:99px;overflow:hidden}
+.mus .track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#2f7cf6,#2fd07a)}
+.mus .n{width:52px;text-align:right;color:#8fa0b8;font-variant-numeric:tabular-nums;font-size:12px}
 
 .dock{position:fixed;left:0;right:0;bottom:0;background:rgba(10,13,18,.94);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #1a2230;
@@ -217,6 +228,15 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
 
   <!-- ============ HISTORY ============ -->
   <section id="p1" class="hide">
+    <div class="card">
+      <div class="hd">Training year <span class="sp"></span><span id="hm_sum" class="hint"></span></div>
+      <div class="heat" id="heat"></div>
+      <div class="hint" id="hm_legend" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="hd">Last 7 days <span class="sp"></span><span id="mus_sum" class="hint"></span></div>
+      <div id="muscles"></div>
+    </div>
     <div class="card">
       <div class="hd">My exercises <span class="sp"></span><span class="hint">accuracy improves with corrections</span></div>
       <div id="h_ex"></div>
@@ -1296,7 +1316,72 @@ function renderWk(){
   if(st) st.textContent=withRaw+' of '+DB.res.length+' sets still hold a raw trace'
     +(syncOn()?' — delivered ones are released automatically':'');
 }
+/* ══ PROGRESS VIEWS ════════════════════════════════════════════════════
+   Nothing here is inferred or modelled — it is the sets you confirmed,
+   arranged so a year of training reads at a glance. The muscle split maps
+   exercise NAMES to groups, so it is a labelling convenience, not a
+   measurement, and it says so.                                          */
+function dayKey(ms){ const d=new Date(ms);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function allWorkouts(){ return [...(DB.cur?[DB.cur]:[]),...DB.wk]; }
+
+function renderHeat(){
+  const el=$('heat'); if(!el) return;
+  const byDay={};
+  for(const w of allWorkouts()){
+    const k=dayKey(w.start);
+    byDay[k]=(byDay[k]||0)+(w.sets?w.sets.length:0);
+  }
+  const WEEKS=26, today=new Date(); today.setHours(0,0,0,0);
+  // start on the Monday of the week containing (today - WEEKS weeks)
+  const start=new Date(today); start.setDate(start.getDate()-(WEEKS*7));
+  const dow=(start.getDay()+6)%7; start.setDate(start.getDate()-dow);
+  let html='', days=0, sets=0;
+  for(let w=0; w<=WEEKS; w++){
+    html+='<div class="wk">';
+    for(let d=0; d<7; d++){
+      const cur=new Date(start); cur.setDate(start.getDate()+w*7+d);
+      if(cur>today){ html+='<i style="visibility:hidden"></i>'; continue; }
+      const n=byDay[dayKey(cur.getTime())]||0;
+      if(n){ days++; sets+=n; }
+      const lvl=n===0?'':(n<=3?'l1':n<=6?'l2':n<=10?'l3':'l4');
+      const isToday=cur.getTime()===today.getTime()?' today':'';
+      html+='<i class="'+lvl+isToday+'" title="'+dayKey(cur.getTime())+': '+n+' sets"></i>';
+    }
+    html+='</div>';
+  }
+  el.innerHTML=html;
+  $('hm_sum').textContent=days?(days+' days · '+sets+' sets'):'no sessions yet';
+  $('hm_legend').innerHTML='Each square is a day over the last six months. '
+    +'<span style="color:#2fd07a">Brighter</span> means more sets.';
+}
+
+function renderMuscles(){
+  const el=$('muscles'); if(!el) return;
+  const since=Date.now()-7*86400000;
+  const tally={}; let total=0;
+  for(const w of allWorkouts()){
+    if(w.start<since) continue;
+    for(const s of (w.sets||[])){
+      let g='Other';
+      for(const [re,name] of MUSCLE){ if(re.test(s.ex)){ g=name; break; } }
+      tally[g]=(tally[g]||0)+1; total++;
+    }
+  }
+  const rows=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  if(!rows.length){ el.innerHTML='<div class="hint">Nothing logged in the last seven days.</div>';
+    $('mus_sum').textContent=''; return; }
+  const max=rows[0][1];
+  el.innerHTML=rows.map(([g,n])=>
+    '<div class="mus"><div class="nm">'+esc(g)+'</div>'
+    +'<div class="track"><i style="width:'+Math.round(n/max*100)+'%"></i></div>'
+    +'<div class="n">'+n+' set'+(n===1?'':'s')+'</div></div>').join('')
+    +'<div class="hint" style="margin-top:8px">Grouped from exercise names, not measured.</div>';
+  $('mus_sum').textContent=total+' sets';
+}
+
 function renderHist(){
+  renderHeat(); renderMuscles();
   const names=Object.keys(DB.ex).sort((a,b)=>(DB.ex[b].used||0)-(DB.ex[a].used||0));
   $('h_ex').innerHTML=names.length?names.map(n=>{
     const e=DB.ex[n], trained=(e.labels||0)>0;
