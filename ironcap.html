@@ -180,6 +180,15 @@ textarea.exp{width:100%;height:40vh;background:#080c12;color:#c6d2e2;border:1px 
   <section id="p0">
     <div class="golive" id="goLive">START SET<span>or click the button on the cap</span></div>
 
+    <div class="card hide" id="handoff" style="border-color:#2c4a6e;background:#101d2f">
+      <div class="hd" style="color:#8ec5ff">Workout ready to send <span class="sp"></span><span id="ho_what"></span></div>
+      <div class="hint">It is saved on this phone. Send the file so the counter can learn from it.</div>
+      <div class="row" style="border:0">
+        <span class="btn prim" id="ho_send" style="flex:2">📤 Send workout</span>
+        <span class="btn gh" id="ho_skip" style="flex:1">Later</span>
+      </div>
+    </div>
+
     <div class="crew hide" id="crewBar"></div>
 
     <div class="card">
@@ -1220,7 +1229,13 @@ function endWorkout(auto){
   const done=DB.wk[0], n=DB.cur.sets.length; DB.cur=null; saveDB(); renderWk(); renderHist();
   apiEmit('workout',JSON.parse(JSON.stringify(done)));
   if(!auto){ toast('Workout saved: '+n+' sets'); say('Workout saved',true); }
-  sendWorkout(done);                       // coach sync, if configured
+  sendWorkout(done);                       // collector upload, if configured
+  // No collector? Then the file has to be handed over by the user. iOS only
+  // opens a share sheet from a real tap, so this cannot be automatic — make it
+  // one obvious tap instead, and keep asking until it is done.
+  if(!syncOn()){ DB.handoff={ts:done.start,sets:done.sets.length,
+    reps:done.sets.reduce((a,x)=>a+x.reps,0)}; saveDB(); }
+  renderHandoff();
   updateSyncChip();
 }
 
@@ -1312,6 +1327,24 @@ function renderHist(){
   }).join(''):'<div class="hint">No finished workouts yet. Hold the cap button to finish one.</div>';
 }
 function fmtKg(v){ return Math.round(v).toLocaleString('en-US'); }   // 1485 -> "1,485"
+
+/* A finished workout that has not left the phone. Shown until it is sent,
+   because a session that never gets handed over is a session that never
+   existed as far as the dataset is concerned. */
+function renderHandoff(){
+  const el=$('handoff'); if(!el) return;
+  const h=DB.handoff;
+  el.classList.toggle('hide',!h);
+  if(h) $('ho_what').textContent=h.sets+' sets · '+h.reps+' reps';
+}
+async function sendHandoff(){
+  const h=DB.handoff; if(!h) return;
+  const w=DB.wk.find(x=>x.start===h.ts)||DB.wk[0];
+  if(!w){ DB.handoff=null; saveDB(); renderHandoff(); return; }
+  await shareWorkoutFile(w);
+  DB.handoff=null; saveDB(); renderHandoff();
+  toast('Thanks — that one is in the dataset now');
+}
 
 /* ══ CREW MODE ═════════════════════════════════════════════════════════
    One sensor, several people taking turns. Whoever is up is tagged on the
@@ -1792,6 +1825,8 @@ $('crewBar').addEventListener('click',e=>{
   S.lifter=+w.dataset.i; renderCrew(); prefillWeight();
   toast(activeLifter().label+' is up');
 });
+$('ho_send').onclick=sendHandoff;
+$('ho_skip').onclick=()=>{ DB.handoff=null; saveDB(); renderHandoff(); };
 $('h_wk').addEventListener('click',e=>{
   const b=e.target.closest('.shareBtn'); if(!b) return;
   const w=DB.wk[+b.dataset.i]; if(w) shareCard(w);
@@ -1895,7 +1930,7 @@ if(DB.cur&&DB.cur.sets&&DB.cur.sets.length){
   if(!finishStaleWorkout()) toast('Workout in progress restored: '+DB.cur.sets.length+' sets');
 }
 setInterval(()=>{ finishStaleWorkout(); flushOutbox(); }, 5*60000);
-setMode(0); renderWk(); renderHist(); renderCrew(); ui();
+setMode(0); renderWk(); renderHist(); renderCrew(); renderHandoff(); ui();
 updateSyncChip();
 if((DB.outbox||[]).length){                       // retry whatever the gym wifi ate
   $('tgState').textContent=DB.outbox.length+' upload(s) waiting to be sent';

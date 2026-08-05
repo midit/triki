@@ -239,15 +239,26 @@ arrives as one file with the sets tagged individually.
 Two ways to get a finished workout off a tester's phone. Neither puts a
 credential on the device.
 
-**1. Share sheet — nothing to set up.** Settings → *Share last workout* hands
-the file to Telegram, mail or anything else installed. One tap, no accounts,
-no configuration. Good enough for a handful of friends.
+**1. Share sheet — nothing to set up, and the default.** When a workout ends,
+a card appears offering to send it; one tap hands the file to Telegram, mail or
+anything else installed. It survives a reload and keeps asking until the file
+has actually gone, because a session that is never handed over may as well not
+exist. iOS only opens a share sheet from a real tap, so this cannot be made
+automatic — it is made unmissable instead.
 
-**2. Collector URL — fully automatic.** Paste one address into Settings and
-finished workouts upload themselves, queued in local storage and retried
-because gym signal is bad. The address is **not a secret**: the worst a leak
-allows is someone posting junk to your own collector, which you fix by
+**2. Collector URL — fully automatic, and optional.** Paste one address into
+Settings and finished workouts upload themselves, queued in local storage and
+retried because gym signal is bad. The address is **not a secret**: the worst a
+leak allows is someone posting junk to your own collector, which you fix by
 rotating the URL. Any real token stays server-side.
+
+> Worth knowing before you deploy one: a public endpoint gets found fast. A new
+> certificate is published to Certificate Transparency logs and crawlers follow
+> within minutes — one collector logged **315 requests in its first 24 hours**,
+> essentially all of them bots probing for GraphQL, admin panels and anti-bot
+> challenges. The Worker rejects anything that is not recognisably an IronCap
+> upload, so none of it reaches the chat, but the invocations still happen. For
+> a few testers the share sheet is quieter and does the same job.
 
 [`worker/ironcap-upload.js`](worker/ironcap-upload.js) is a ~30-line Cloudflare
 Worker (free tier) that accepts an upload and forwards it to Telegram as a
